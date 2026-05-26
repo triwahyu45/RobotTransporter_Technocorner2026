@@ -3,135 +3,55 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Simulator Kinematika Omni X-Drive</title>
+    <title>Technocorner UGM 2026 - Control Center</title>
     <style>
         body {
-            font-family: monospace;
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #000;
-            padding: 20px;
-            border: 1px solid #00ff00;
-        }
-
-        h2 {
-            text-align: center;
-            border-bottom: 1px solid #00ff00;
-            padding-bottom: 10px;
-        }
-
-        .data-row {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            font-size: 1.2em;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
         }
 
-        .motor-box {
-            border: 1px dashed #00ff00;
-            padding: 10px;
-            width: 45%;
-            text-align: center;
-            margin-bottom: 10px;
+        h1 {
+            color: #00ffcc;
         }
 
-        .chassis {
+        .menu {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            margin-top: 20px;
+            flex-direction: column;
+            gap: 20px;
+            width: 300px;
+        }
+
+        a {
+            background: #333;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid #555;
+            transition: 0.3s;
+        }
+
+        a:hover {
+            background: #007acc;
+            border-color: #005999;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h2>STATUS: <span id="status">MENUNGGU STIK PS4... (Tekan Tombol)</span></h2>
-
-        <div class="data-row">
-            <span>Sumbu X (Kiri/Kanan): <span id="axis-x">0.00</span></span>
-        </div>
-        <div class="data-row">
-            <span>Sumbu Y (Maju/Mundur): <span id="axis-y">0.00</span></span>
-        </div>
-        <div class="data-row">
-            <span>Sumbu Z (Rotasi L/R): <span id="axis-z">0.00</span></span>
-        </div>
-
-        <h3 style="text-align: center; margin-top: 30px;">OUTPUT PWM MOTOR (0 - 255)</h3>
-        <div class="chassis">
-            <div class="motor-box">Depan Kiri (FL)<br><b id="pwm-fl" style="font-size: 1.5em;">0</b></div>
-            <div class="motor-box">Depan Kanan (FR)<br><b id="pwm-fr" style="font-size: 1.5em;">0</b></div>
-            <div class="motor-box">Belakang Kiri (RL)<br><b id="pwm-rl" style="font-size: 1.5em;">0</b></div>
-            <div class="motor-box">Belakang Kanan (RR)<br><b id="pwm-rr" style="font-size: 1.5em;">0</b></div>
-        </div>
+    <h1>Omni-Drive Control System</h1>
+    <div class="menu">
+        <a href="simulator.html">🚀 Buka Simulator 3D</a>
+        <a href="stick_test.html">🎮 Test Sensor Stick PS4</a>
     </div>
-
-    <script>
-        let gamepadIndex = null;
-
-        window.addEventListener("gamepadconnected", (e) => {
-            gamepadIndex = e.gamepad.index;
-            document.getElementById("status").innerText = "TERHUBUNG: " + e.gamepad.id;
-            updateLoop();
-        });
-
-        window.addEventListener("gamepaddisconnected", (e) => {
-            if (e.gamepad.index === gamepadIndex) {
-                gamepadIndex = null;
-                document.getElementById("status").innerText = "TERPUTUS";
-            }
-        });
-
-        function updateLoop() {
-            if (gamepadIndex !== null) {
-                const gamepad = navigator.getGamepads()[gamepadIndex];
-                if (gamepad) {
-                    // Mapping Analog Stik PS4 (Batas -1.0 hingga 1.0)
-                    // Axis 0 = Kiri Analog X, Axis 1 = Kiri Analog Y (Terbalik), Axis 2 = Kanan Analog X
-
-                    // Filter Deadzone (0.1) untuk mengatasi analog drifting
-                    let x = Math.abs(gamepad.axes[0]) > 0.1 ? gamepad.axes[0] : 0;
-                    let y = Math.abs(gamepad.axes[1]) > 0.1 ? -gamepad.axes[1] : 0; // Invert Y agar atas = positif
-                    let z = Math.abs(gamepad.axes[2]) > 0.1 ? gamepad.axes[2] : 0;
-
-                    document.getElementById("axis-x").innerText = x.toFixed(2);
-                    document.getElementById("axis-y").innerText = y.toFixed(2);
-                    document.getElementById("axis-z").innerText = z.toFixed(2);
-
-                    // Rumus Kinematika Translasi ke Nilai Maksimum
-                    let fl = y + x + z;
-                    let fr = y - x - z;
-                    let rl = y - x + z;
-                    let rr = y + x - z;
-
-                    // Mencari nilai absolut tertinggi untuk normalisasi jika melebihi 1.0
-                    let maxVal = Math.max(Math.abs(fl), Math.abs(fr), Math.abs(rl), Math.abs(rr));
-
-                    if (maxVal > 1.0) {
-                        fl /= maxVal;
-                        fr /= maxVal;
-                        rl /= maxVal;
-                        rr /= maxVal;
-                    }
-
-                    // Konversi ke skala PWM (0 - 255)
-                    // Nilai minus menandakan arah putaran mundur (IN1/IN2 pada TB6612FNG di-reverse)
-                    document.getElementById("pwm-fl").innerText = Math.round(fl * 255);
-                    document.getElementById("pwm-fr").innerText = Math.round(fr * 255);
-                    document.getElementById("pwm-rl").innerText = Math.round(rl * 255);
-                    document.getElementById("pwm-rr").innerText = Math.round(rr * 255);
-                }
-            }
-            requestAnimationFrame(updateLoop);
-        }
-    </script>
 </body>
 
 </html>

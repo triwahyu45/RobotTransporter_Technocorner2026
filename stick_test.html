@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Diagnostic Stick PS4</title>
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .box {
+            border: 1px solid #0f0;
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>PS4 Stick Raw Diagnostic</h2>
+    <div id="status">Menunggu Stick...</div>
+    <div id="axes" class="grid"></div>
+
+    <script>
+        window.addEventListener("gamepadconnected", (e) => {
+            document.getElementById("status").innerText = "Terhubung: " + e.gamepad.id;
+            requestAnimationFrame(update);
+        });
+
+        function update() {
+            const gp = navigator.getGamepads()[0];
+            if (gp) {
+                let html = "";
+                gp.axes.forEach((val, i) => {
+                    html += `<div class="box">Axis ${i}: ${val.toFixed(4)}</div>`;
+                });
+                document.getElementById("axes").innerHTML = html;
+            }
+            requestAnimationFrame(update);
+        }
+    </script>
+</body>
+
+</html>
