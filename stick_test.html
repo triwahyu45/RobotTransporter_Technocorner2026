@@ -3,50 +3,847 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Diagnostic Stick PS4</title>
+    <title>Gamepad Tester</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600&display=swap');
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0e1117;
+            --surface: #161b24;
+            --border: #252d3a;
+            --accent: #00e5a0;
+            --accent2: #00b3ff;
+            --dim: #2a3344;
+            --text: #c8d8e8;
+            --muted: #4a5a6a;
+            --danger: #ff4444;
+            --warning: #ffaa00;
+            --cross: #4a9eff;
+            --circle: #ff4466;
+            --square: #cc88ff;
+            --triangle: #44ee88;
+        }
+
         body {
-            background: #000;
-            color: #0f0;
-            font-family: monospace;
-            padding: 20px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px 40px;
+            overflow-x: hidden;
         }
 
-        .grid {
+        h1 {
+            font-size: 13px;
+            letter-spacing: 0.25em;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        #status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 760px;
+        }
+
+        #status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+            transition: background 0.3s;
+        }
+
+        #status-dot.on {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        #status-text {
+            flex: 1;
+        }
+
+        #input-count {
+            color: var(--accent);
+        }
+
+        /* ---- CONTROLLER WRAPPER ---- */
+        .controller-wrap {
+            position: relative;
+            width: 720px;
+            height: 480px;
+            margin-bottom: 16px;
+        }
+
+        /* SVG controller body */
+        #controller-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ---- TRIGGER BARS (top) ---- */
+        .trigger-zone {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            top: 14px;
+        }
+
+        .trigger-zone.left {
+            left: 108px;
+        }
+
+        .trigger-zone.right {
+            right: 108px;
+        }
+
+        .trigger-label {
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .trigger-track {
+            width: 14px;
+            height: 80px;
+            background: var(--dim);
+            border-radius: 7px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .trigger-fill {
+            width: 100%;
+            height: 0%;
+            background: var(--accent);
+            border-radius: 7px;
+            transition: height 0.03s;
+            box-shadow: 0 0 6px var(--accent);
+        }
+
+        .trigger-fill.r {
+            background: var(--accent2);
+            box-shadow: 0 0 6px var(--accent2);
+        }
+
+        .trigger-val {
+            font-size: 10px;
+            color: var(--accent);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .trigger-val.r {
+            color: var(--accent2);
+        }
+
+        /* ---- STICKS overlay ---- */
+        .stick-overlay {
+            position: absolute;
+        }
+
+        .stick-overlay.left {
+            left: 155px;
+            top: 210px;
+        }
+
+        .stick-overlay.right {
+            left: 380px;
+            top: 285px;
+        }
+
+        .stick-ring {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            background: #0a0f16;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stick-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            height: 1px;
+            background: var(--dim);
+        }
+
+        .stick-crosshair.v {
+            width: 1px;
+            height: 90%;
+        }
+
+        canvas.trail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .stick-dot {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            top: calc(50% - 7px);
+            left: calc(50% - 7px);
+            transition: transform 0.02s;
+            z-index: 2;
+        }
+
+        .stick-dot.r {
+            background: var(--accent2);
+            box-shadow: 0 0 10px var(--accent2);
+        }
+
+        /* ring outer glow when active */
+        .stick-active .stick-ring {
+            border-color: var(--accent);
+        }
+
+        .stick-active.r .stick-ring {
+            border-color: var(--accent2);
+        }
+
+        .stick-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            color: var(--muted);
+            width: 100px;
+        }
+
+        .drift-badge {
+            margin-top: 3px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            text-align: center;
+            width: 100px;
+        }
+
+        .drift-none {
+            color: var(--accent);
+        }
+
+        .drift-low {
+            color: var(--warning);
+        }
+
+        .drift-moderate {
+            color: var(--warning);
+        }
+
+        .drift-severe {
+            color: var(--danger);
+        }
+
+        /* ---- BUTTONS GRID ---- */
+        .btn-section {
+            width: 100%;
+            max-width: 760px;
+            margin-top: 4px;
+        }
+
+        .btn-section-label {
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            color: var(--muted);
+            text-transform: uppercase;
+            font-family: 'Share Tech Mono', monospace;
+            margin-bottom: 8px;
+        }
+
+        .btn-track {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .btn-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--surface);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            transition: all 0.08s;
+            min-width: 52px;
+            justify-content: center;
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 0.04em;
+        }
+
+        .btn-chip .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background 0.05s;
+        }
+
+        /* pressed states */
+        .btn-chip.p-cross {
+            background: #0a2040;
+            border-color: var(--cross);
+            color: var(--cross);
+        }
+
+        .btn-chip.p-cross .dot {
+            background: var(--cross);
+            box-shadow: 0 0 6px var(--cross);
+        }
+
+        .btn-chip.p-circle {
+            background: #2a0515;
+            border-color: var(--circle);
+            color: var(--circle);
+        }
+
+        .btn-chip.p-circle .dot {
+            background: var(--circle);
+            box-shadow: 0 0 6px var(--circle);
+        }
+
+        .btn-chip.p-square {
+            background: #1a0a2a;
+            border-color: var(--square);
+            color: var(--square);
+        }
+
+        .btn-chip.p-square .dot {
+            background: var(--square);
+            box-shadow: 0 0 6px var(--square);
+        }
+
+        .btn-chip.p-triangle {
+            background: #0a2015;
+            border-color: var(--triangle);
+            color: var(--triangle);
+        }
+
+        .btn-chip.p-triangle .dot {
+            background: var(--triangle);
+            box-shadow: 0 0 6px var(--triangle);
+        }
+
+        .btn-chip.p-generic {
+            background: #101820;
+            border-color: var(--accent2);
+            color: var(--accent2);
+        }
+
+        .btn-chip.p-generic .dot {
+            background: var(--accent2);
+            box-shadow: 0 0 6px var(--accent2);
+        }
+
+        /* tested indicator */
+        .btn-chip.tested {
+            border-color: var(--dim);
+        }
+
+        /* ---- AXES RAW ---- */
+        .axes-section {
+            width: 100%;
+            max-width: 760px;
+            margin-top: 16px;
+        }
+
+        .axes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
         }
 
-        .box {
-            border: 1px solid #0f0;
-            padding: 10px;
+        .axis-cell {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+
+        .axis-name {
+            font-size: 10px;
+            color: var(--muted);
+            font-family: 'Share Tech Mono', monospace;
+            margin-bottom: 4px;
+        }
+
+        .axis-bar-wrap {
+            height: 4px;
+            background: var(--dim);
+            border-radius: 2px;
+            position: relative;
+            overflow: visible;
+            margin-bottom: 4px;
+        }
+
+        /* center line */
+        .axis-bar-wrap::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: -2px;
+            width: 1px;
+            height: 8px;
+            background: var(--border);
+            transform: translateX(-50%);
+        }
+
+        .axis-bar {
+            position: absolute;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            top: 0;
+            transition: left 0.03s, width 0.03s;
+        }
+
+        .axis-val {
+            font-size: 11px;
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
         }
     </style>
 </head>
 
 <body>
-    <h2>PS4 Stick Raw Diagnostic</h2>
-    <div id="status">Menunggu Stick...</div>
-    <div id="axes" class="grid"></div>
+
+    <h1>Gamepad Diagnostic</h1>
+
+    <div id="status-bar">
+        <div id="status-dot"></div>
+        <span id="status-text">Menunggu controller — colok USB atau pair Bluetooth, lalu tekan tombol apapun</span>
+        <span id="input-count"></span>
+    </div>
+
+    <!-- CONTROLLER VISUAL -->
+    <div class="controller-wrap">
+
+        <!-- SVG BODY -->
+        <svg id="controller-svg" viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                    <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- BODY SHAPE -->
+            <path d="
+      M 210 120
+      C 180 80, 100 70, 70 130
+      C 40 180, 30 240, 28 290
+      C 25 360, 60 430, 120 440
+      C 170 450, 210 420, 240 390
+      C 265 365, 290 355, 360 355
+      C 430 355, 455 365, 480 390
+      C 510 420, 550 450, 600 440
+      C 660 430, 695 360, 692 290
+      C 690 240, 680 180, 650 130
+      C 620 70, 540 80, 510 120
+      C 490 140, 470 150, 430 155
+      C 400 158, 380 160, 360 160
+      C 340 160, 320 158, 290 155
+      C 250 150, 230 140, 210 120
+      Z
+    " fill="#141b25" stroke="#252d3a" stroke-width="1.5" />
+
+            <!-- LEFT GRIP -->
+            <path d="
+      M 80 220 C 45 250, 28 310, 28 290
+      C 25 360, 60 430, 120 440
+      C 160 448, 200 428, 228 405
+      C 210 380, 200 340, 195 300
+      C 188 260, 160 235, 120 225
+      Z
+    " fill="#111820" stroke="#1e2733" stroke-width="1" />
+
+            <!-- RIGHT GRIP -->
+            <path d="
+      M 640 220 C 675 250, 692 310, 692 290
+      C 695 360, 660 430, 600 440
+      C 560 448, 520 428, 492 405
+      C 510 380, 520 340, 525 300
+      C 532 260, 560 235, 600 225
+      Z
+    " fill="#111820" stroke="#1e2733" stroke-width="1" />
+
+            <!-- LEFT TRIGGER slot -->
+            <path
+                d="M 108 58 C 95 50, 72 55, 68 80 L 68 100 C 68 115, 80 118, 95 115 L 175 115 C 190 112, 195 100, 190 85 L 185 68 C 180 52, 165 48, 150 52 Z"
+                fill="#0e1520" stroke="#252d3a" stroke-width="1.5" />
+
+            <!-- RIGHT TRIGGER slot -->
+            <path
+                d="M 612 58 C 625 50, 648 55, 652 80 L 652 100 C 652 115, 640 118, 625 115 L 545 115 C 530 112, 525 100, 530 85 L 535 68 C 540 52, 555 48, 570 52 Z"
+                fill="#0e1520" stroke="#252d3a" stroke-width="1.5" />
+
+            <!-- BUMPERS -->
+            <path
+                d="M 100 135 C 90 128, 82 132, 82 140 L 82 155 C 82 162, 88 165, 100 162 L 188 162 C 200 160, 205 155, 202 148 L 198 138 C 195 130, 185 128, 175 132 Z"
+                fill="#161e2a" stroke="#252d3a" stroke-width="1" id="lb-shape" />
+            <path
+                d="M 620 135 C 630 128, 638 132, 638 140 L 638 155 C 638 162, 632 165, 620 162 L 532 162 C 520 160, 515 155, 518 148 L 522 138 C 525 130, 535 128, 545 132 Z"
+                fill="#161e2a" stroke="#252d3a" stroke-width="1" id="rb-shape" />
+            <text x="145" y="153" text-anchor="middle" font-size="11" fill="#3a4a5a" font-family="Rajdhani,sans-serif"
+                font-weight="600">L1</text>
+            <text x="575" y="153" text-anchor="middle" font-size="11" fill="#3a4a5a" font-family="Rajdhani,sans-serif"
+                font-weight="600">R1</text>
+
+            <!-- TOUCHPAD / CENTER area -->
+            <rect x="280" y="175" width="160" height="100" rx="14" fill="#111820" stroke="#1e2733" stroke-width="1"
+                id="touchpad" />
+            <text x="360" y="232" text-anchor="middle" font-size="9" fill="#2a3a4a"
+                font-family="Share Tech Mono,monospace">TOUCHPAD</text>
+
+            <!-- Share / Options / PS buttons -->
+            <circle cx="280" cy="200" r="12" fill="#111820" stroke="#1e2733" stroke-width="1" id="share-btn" />
+            <circle cx="440" cy="200" r="12" fill="#111820" stroke="#1e2733" stroke-width="1" id="options-btn" />
+            <circle cx="360" cy="170" r="14" fill="#0e1520" stroke="#1e2733" stroke-width="1" id="ps-btn" />
+            <text x="280" y="204" text-anchor="middle" font-size="9" fill="#3a4a5a"
+                font-family="Rajdhani,sans-serif">SHR</text>
+            <text x="440" y="204" text-anchor="middle" font-size="9" fill="#3a4a5a"
+                font-family="Rajdhani,sans-serif">OPT</text>
+            <text x="360" y="175" text-anchor="middle" font-size="9" fill="#3a4a5a"
+                font-family="Rajdhani,sans-serif">PS</text>
+
+            <!-- D-PAD -->
+            <g id="dpad">
+                <!-- center -->
+                <rect x="328" y="293" width="40" height="40" rx="4" fill="#0e1520" stroke="#1e2733" stroke-width="1" />
+                <!-- UP -->
+                <rect x="335" y="270" id="dpad-up" width="26" height="26" rx="4" fill="#111820" stroke="#1e2733"
+                    stroke-width="1" />
+                <text x="348" y="287" text-anchor="middle" font-size="10" fill="#2a3a4a" font-family="Rajdhani">▲</text>
+                <!-- DOWN -->
+                <rect x="335" y="330" id="dpad-dn" width="26" height="26" rx="4" fill="#111820" stroke="#1e2733"
+                    stroke-width="1" />
+                <text x="348" y="347" text-anchor="middle" font-size="10" fill="#2a3a4a" font-family="Rajdhani">▼</text>
+                <!-- LEFT -->
+                <rect x="305" y="300" id="dpad-lt" width="26" height="26" rx="4" fill="#111820" stroke="#1e2733"
+                    stroke-width="1" />
+                <text x="318" y="317" text-anchor="middle" font-size="10" fill="#2a3a4a" font-family="Rajdhani">◀</text>
+                <!-- RIGHT -->
+                <rect x="365" y="300" id="dpad-rt" width="26" height="26" rx="4" fill="#111820" stroke="#1e2733"
+                    stroke-width="1" />
+                <text x="378" y="317" text-anchor="middle" font-size="10" fill="#2a3a4a" font-family="Rajdhani">▶</text>
+            </g>
+
+            <!-- FACE BUTTONS (Cross, Circle, Square, Triangle) -->
+            <circle cx="530" cy="245" r="14" fill="#111820" stroke="#1e2733" stroke-width="1.5" id="face-sq" />
+            <text x="530" y="250" text-anchor="middle" font-size="12" fill="#553388" font-family="Rajdhani"
+                font-weight="600">■</text>
+            <circle cx="558" cy="273" r="14" fill="#111820" stroke="#1e2733" stroke-width="1.5" id="face-x" />
+            <text x="558" y="278" text-anchor="middle" font-size="12" fill="#224488" font-family="Rajdhani"
+                font-weight="600">✕</text>
+            <circle cx="558" cy="217" r="14" fill="#111820" stroke="#1e2733" stroke-width="1.5" id="face-tri" />
+            <text x="558" y="222" text-anchor="middle" font-size="12" fill="#226644" font-family="Rajdhani"
+                font-weight="600">△</text>
+            <circle cx="586" cy="245" r="14" fill="#111820" stroke="#1e2733" stroke-width="1.5" id="face-ci" />
+            <text x="586" y="250" text-anchor="middle" font-size="12" fill="#882244" font-family="Rajdhani"
+                font-weight="600">○</text>
+
+            <!-- STICK BASEPLATES -->
+            <circle cx="205" cy="262" r="52" fill="#0a1018" stroke="#1e2733" stroke-width="1.5" />
+            <circle cx="430" cy="338" r="52" fill="#0a1018" stroke="#1e2733" stroke-width="1.5" />
+        </svg>
+
+        <!-- LEFT TRIGGER BAR -->
+        <div class="trigger-zone left">
+            <div class="trigger-label">L2</div>
+            <div class="trigger-track">
+                <div class="trigger-fill" id="l2-fill"></div>
+            </div>
+            <div class="trigger-val" id="l2-val">0%</div>
+        </div>
+
+        <!-- RIGHT TRIGGER BAR -->
+        <div class="trigger-zone right">
+            <div class="trigger-label">R2</div>
+            <div class="trigger-track">
+                <div class="trigger-fill r" id="r2-fill"></div>
+            </div>
+            <div class="trigger-val r" id="r2-val">0%</div>
+        </div>
+
+        <!-- LEFT STICK OVERLAY -->
+        <div class="stick-overlay left" id="ls-wrap">
+            <div class="stick-ring">
+                <div class="stick-crosshair"></div>
+                <div class="stick-crosshair v"></div>
+                <canvas class="trail" id="ls-trail" width="100" height="100"></canvas>
+                <div class="stick-dot" id="ls-dot"></div>
+            </div>
+            <div class="stick-info">
+                <span id="ls-x">0.000</span>
+                <span id="ls-y">0.000</span>
+            </div>
+            <div class="drift-badge drift-none" id="ls-drift">drift: —</div>
+        </div>
+
+        <!-- RIGHT STICK OVERLAY -->
+        <div class="stick-overlay right" id="rs-wrap">
+            <div class="stick-ring">
+                <div class="stick-crosshair"></div>
+                <div class="stick-crosshair v"></div>
+                <canvas class="trail" id="rs-trail" width="100" height="100"></canvas>
+                <div class="stick-dot r" id="rs-dot"></div>
+            </div>
+            <div class="stick-info">
+                <span id="rs-x">0.000</span>
+                <span id="rs-y">0.000</span>
+            </div>
+            <div class="drift-badge drift-none" id="rs-drift">drift: —</div>
+        </div>
+    </div>
+
+    <!-- BUTTONS SECTION -->
+    <div class="btn-section">
+        <div class="btn-section-label">Buttons</div>
+        <div class="btn-track" id="btn-track"></div>
+    </div>
+
+    <!-- AXES RAW -->
+    <div class="axes-section">
+        <div class="btn-section-label" style="margin-bottom:8px">Axes raw</div>
+        <div class="axes-grid" id="axes-grid"></div>
+    </div>
 
     <script>
-        window.addEventListener("gamepadconnected", (e) => {
-            document.getElementById("status").innerText = "Terhubung: " + e.gamepad.id;
-            requestAnimationFrame(update);
-        });
+        const BTN_DEFS = [
+            { n: '✕ Cross', cls: 'cross', svg: 'face-x', press: 'p-cross' },
+            { n: '○ Circle', cls: 'circle', svg: 'face-ci', press: 'p-circle' },
+            { n: '■ Square', cls: 'square', svg: 'face-sq', press: 'p-square' },
+            { n: '△ Triangle', cls: 'triangle', svg: 'face-tri', press: 'p-triangle' },
+            { n: 'L1', svg: 'lb-shape', press: 'p-generic' },
+            { n: 'R1', svg: 'rb-shape', press: 'p-generic' },
+            { n: 'L2', press: 'p-generic' },
+            { n: 'R2', press: 'p-generic' },
+            { n: 'Share', svg: 'share-btn', press: 'p-generic' },
+            { n: 'Options', svg: 'options-btn', press: 'p-generic' },
+            { n: 'L3', press: 'p-generic' },
+            { n: 'R3', press: 'p-generic' },
+            { n: 'D-Up', svg: 'dpad-up', press: 'p-generic' },
+            { n: 'D-Down', svg: 'dpad-dn', press: 'p-generic' },
+            { n: 'D-Left', svg: 'dpad-lt', press: 'p-generic' },
+            { n: 'D-Right', svg: 'dpad-rt', press: 'p-generic' },
+            { n: 'PS', svg: 'ps-btn', press: 'p-generic' },
+            { n: 'Touch', svg: 'touchpad', press: 'p-generic' },
+        ];
+
+        let started = false;
+        let lsTrail = [], rsTrail = [];
+        const TRAIL_LEN = 80;
+        const testedSet = new Set();
+
+        function buildButtons() {
+            const track = document.getElementById('btn-track');
+            track.innerHTML = '';
+            BTN_DEFS.forEach((b, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'btn-chip';
+                chip.id = 'chip-' + i;
+                chip.innerHTML = `<span class="dot" id="dot-${i}"></span>${b.n}`;
+                track.appendChild(chip);
+            });
+        }
+
+        function buildAxes(count) {
+            const grid = document.getElementById('axes-grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                grid.innerHTML += `
+      <div class="axis-cell">
+        <div class="axis-name">Axis ${i}</div>
+        <div class="axis-bar-wrap">
+          <div class="axis-bar" id="ax-bar-${i}" style="left:50%;width:0%"></div>
+        </div>
+        <div class="axis-val" id="ax-val-${i}">0.0000</div>
+      </div>`;
+            }
+        }
+
+        function getDrift(x, y) {
+            const m = Math.sqrt(x * x + y * y);
+            if (m < 0.01) return { label: 'none', cls: 'drift-none', m };
+            if (m < 0.06) return { label: 'low', cls: 'drift-low', m };
+            if (m < 0.15) return { label: 'moderate', cls: 'drift-moderate', m };
+            return { label: 'SEVERE', cls: 'drift-severe', m };
+        }
+
+        function drawTrail(ctx, pts, color) {
+            ctx.clearRect(0, 0, 100, 100);
+            if (pts.length < 2) return;
+            for (let i = 1; i < pts.length; i++) {
+                const alpha = (i / pts.length) * 0.5;
+                ctx.beginPath();
+                ctx.strokeStyle = color.replace('1)', alpha + ')');
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
+                ctx.lineTo(pts[i].x, pts[i].y);
+                ctx.stroke();
+            }
+        }
+
+        function updateStick(ax, ay, dotId, xId, yId, driftId, wrapId, trailId, trailArr, color) {
+            const px = ax * 43, py = ay * 43;
+            document.getElementById(dotId).style.transform = `translate(${px}px,${py}px)`;
+            document.getElementById(xId).textContent = ax.toFixed(3);
+            document.getElementById(yId).textContent = ay.toFixed(3);
+
+            trailArr.push({ x: 50 + px, y: 50 + py });
+            if (trailArr.length > TRAIL_LEN) trailArr.shift();
+            const ctx = document.getElementById(trailId).getContext('2d');
+            drawTrail(ctx, trailArr, color);
+
+            const d = getDrift(ax, ay);
+            const de = document.getElementById(driftId);
+            de.textContent = `drift: ${d.label} (${(d.m * 100).toFixed(1)}%)`;
+            de.className = 'drift-badge ' + d.cls;
+
+            const wrap = document.getElementById(wrapId);
+            const isActive = Math.abs(ax) > 0.05 || Math.abs(ay) > 0.05;
+            wrap.classList.toggle('stick-active', isActive);
+        }
+
+        function svgHighlight(id, on, color) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.fill = on ? color : '';
+            el.style.stroke = on ? color : '';
+            el.style.filter = on ? 'url(#glow)' : '';
+        }
 
         function update() {
-            const gp = navigator.getGamepads()[0];
+            const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
             if (gp) {
-                let html = "";
-                gp.axes.forEach((val, i) => {
-                    html += `<div class="box">Axis ${i}: ${val.toFixed(4)}</div>`;
+                const ax = gp.axes;
+
+                // Sticks
+                updateStick(ax[0] || 0, ax[1] || 0, 'ls-dot', 'ls-x', 'ls-y', 'ls-drift', 'ls-wrap', 'ls-trail', lsTrail, 'rgba(0,229,160,1)');
+                updateStick(ax[2] || 0, ax[3] || 0, 'rs-dot', 'rs-x', 'rs-y', 'rs-drift', 'rs-wrap', 'rs-trail', rsTrail, 'rgba(0,179,255,1)');
+
+                // Triggers
+                let l2 = 0, r2 = 0;
+                if (ax.length >= 6) {
+                    l2 = (ax[4] + 1) / 2;
+                    r2 = (ax[5] + 1) / 2;
+                } else {
+                    l2 = gp.buttons[6] ? gp.buttons[6].value : 0;
+                    r2 = gp.buttons[7] ? gp.buttons[7].value : 0;
+                }
+                document.getElementById('l2-fill').style.height = (l2 * 100).toFixed(1) + '%';
+                document.getElementById('l2-val').textContent = (l2 * 100).toFixed(0) + '%';
+                document.getElementById('r2-fill').style.height = (r2 * 100).toFixed(1) + '%';
+                document.getElementById('r2-val').textContent = (r2 * 100).toFixed(0) + '%';
+
+                // Axes raw
+                ax.forEach((v, i) => {
+                    const bar = document.getElementById('ax-bar-' + i);
+                    const val = document.getElementById('ax-val-' + i);
+                    if (!bar || !val) return;
+                    const pct = Math.abs(v) * 50;
+                    bar.style.left = v >= 0 ? '50%' : (50 - pct).toFixed(1) + '%';
+                    bar.style.width = pct.toFixed(1) + '%';
+                    bar.style.background = v < 0 ? '#ff4444' : '#00e5a0';
+                    val.textContent = v.toFixed(4);
                 });
-                document.getElementById("axes").innerHTML = html;
+
+                // Buttons
+                const faceColors = ['#1155cc', '#aa1133', '#6633aa', '#116633'];
+                gp.buttons.forEach((btn, i) => {
+                    const def = BTN_DEFS[i];
+                    if (!def) return;
+                    const chip = document.getElementById('chip-' + i);
+                    if (!chip) return;
+                    const on = btn.pressed;
+
+                    if (on && !testedSet.has(i)) {
+                        testedSet.add(i);
+                        chip.classList.add('tested');
+                    }
+
+                    chip.className = 'btn-chip' + (on ? ' ' + (def.press || 'p-generic') : (testedSet.has(i) ? ' tested' : ''));
+
+                    // SVG highlight
+                    if (def.svg) {
+                        const svgFills = { cross: '#1155cc', circle: '#aa1133', square: '#6633aa', triangle: '#116633' };
+                        const c = svgFills[def.cls] || '#00b3ff';
+                        svgHighlight(def.svg, on, c);
+                    }
+                });
+
+                // Input count
+                const total = gp.buttons.length;
+                document.getElementById('input-count').textContent = `${testedSet.size} / ${total} inputs tested`;
             }
             requestAnimationFrame(update);
         }
+
+        window.addEventListener('gamepadconnected', e => {
+            document.getElementById('status-dot').classList.add('on');
+            document.getElementById('status-text').textContent = e.gamepad.id;
+            buildAxes(e.gamepad.axes.length);
+            if (!started) { started = true; requestAnimationFrame(update); }
+        });
+        window.addEventListener('gamepaddisconnected', () => {
+            document.getElementById('status-dot').classList.remove('on');
+            document.getElementById('status-text').textContent = 'Controller terputus — colok lagi';
+            document.getElementById('input-count').textContent = '';
+        });
+
+        buildButtons();
     </script>
 </body>
 
