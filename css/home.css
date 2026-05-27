@@ -31,10 +31,14 @@ body {
 
 .profile {
     display: flex;
-    flex-direction: row-reverse;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: clamp(16px, 5vw, 28px);
+}
+
+.profile>div {
+    text-align: left;
 }
 
 .profile img {
@@ -48,10 +52,11 @@ body {
 
 .profile h1 {
     margin: 0;
-    font-size: clamp(38px, 10vw, 66px);
-    line-height: .94;
-    font-weight: 620;
-    letter-spacing: 0;
+    font-size: clamp(26px, 6vw, 34px);
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: .01em;
+    white-space: nowrap;
 }
 
 .github-link {
