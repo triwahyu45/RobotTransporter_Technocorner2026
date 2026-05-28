@@ -200,6 +200,8 @@ void loop() {
                 <button class="ui-btn cam-preset" data-view="finish">FINISH</button>
                 <button class="ui-btn cam-preset" data-view="left">LEFT</button>
                 <button class="ui-btn cam-preset" data-view="right">RIGHT</button>
+                <button class="ui-btn cam-preset" data-view="box">BOX</button>
+                <button id="toggle-3d-btn" class="ui-btn active-toggle">3D ON</button>
                 <button id="toggle-mode-btn" class="ui-btn">MODE: SOFTWARE</button>
                 <button id="lock-view-btn" class="ui-btn">LOCK VIEW OFF</button>
                 <button id="robot-mouse-btn" class="ui-btn">ROBOT MOUSE OFF</button>
@@ -508,7 +510,8 @@ void loop() {
             center: { pos: [-0.78, 0.82, 0.28], target: [0, 0.035, 0.02] },
             finish: { pos: [0, 0.68, -1.18], target: [0, 0.035, -1.40] },
             left: { pos: [-1.33, 0.72, 0.12], target: [-0.42, 0.025, 0.02] },
-            right: { pos: [1.33, 0.72, 0.12], target: [0.42, 0.025, 0.02] }
+            right: { pos: [1.33, 0.72, 0.12], target: [0.42, 0.025, 0.02] },
+            box: { pos: [0.95, 0.62, 0.92], target: [0.57, 0.035, 0.64] }
         };
 
         function setCameraPreset(name) {
@@ -536,6 +539,27 @@ void loop() {
         scene.add(grid);
 
         const tofObjects = [];
+        const track3DGroup = new THREE.Group();
+        track3DGroup.name = 'track-3d-debug-layer';
+        scene.add(track3DGroup);
+        let track3DVisible = true;
+
+        function setTrack3DVisible(visible) {
+            track3DVisible = visible;
+            track3DGroup.visible = visible;
+            const btn = document.getElementById('toggle-3d-btn');
+            if (btn) {
+                btn.textContent = visible ? '3D ON' : '3D OFF';
+                btn.classList.toggle('active-toggle', visible);
+            }
+        }
+
+        document.getElementById('toggle-3d-btn')?.addEventListener('click', () => {
+            setTrack3DVisible(!track3DVisible);
+        });
+        if (new URLSearchParams(window.location.search).get('mesh') === 'off') {
+            setTrack3DVisible(false);
+        }
 
         function createArena() {
             const cm = 0.01;
@@ -549,7 +573,6 @@ void loop() {
             const fieldMat = new THREE.MeshPhongMaterial({
                 color: 0xffffff, map: trackTexture, shininess: 0
             });
-            const floorPatchMat = new THREE.MeshBasicMaterial({ color: 0xe8eaeb, side: THREE.DoubleSide });
             const wallMat = new THREE.MeshPhongMaterial({
                 color: 0x171a1f, emissive: 0x05080c, shininess: 35
             });
@@ -558,8 +581,8 @@ void loop() {
             });
             const startMat = new THREE.MeshBasicMaterial({ color: 0x1efc89, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
             const finishMat = new THREE.MeshPhongMaterial({ color: 0x18b7ff, emissive: 0x07354a, shininess: 18 });
-            const rampLightMat = new THREE.MeshPhongMaterial({ color: 0xb9bec3, shininess: 18, side: THREE.DoubleSide });
-            const topFloorMat = new THREE.MeshPhongMaterial({ color: 0x55585f, shininess: 16 });
+            const rampLightMat = new THREE.MeshPhongMaterial({ color: 0x9fa4aa, shininess: 18, side: THREE.DoubleSide });
+            const topFloorMat = new THREE.MeshPhongMaterial({ color: 0x363a40, shininess: 14 });
 
             const colors = {
                 orange: { hex: 0xffaa19 }, blue: { hex: 0x2426d9 }, pink: { hex: 0xe767e6 },
@@ -589,13 +612,13 @@ void loop() {
                 return sprite;
             }
 
-            function addPlaneCm(xCm, yCm, wCm, hCm, mat, name = 'track-plane', yM = 0.001) {
+            function addPlaneCm(xCm, yCm, wCm, hCm, mat, name = 'track-plane', yM = 0.001, inTrack3D = true) {
                 const g = new THREE.PlaneGeometry(wCm * cm, hCm * cm);
                 const m = new THREE.Mesh(g, mat);
                 m.rotation.x = -Math.PI / 2;
                 m.position.set(cmX(xCm), yM, cmZ(yCm));
                 m.name = name;
-                scene.add(m);
+                (inTrack3D ? track3DGroup : scene).add(m);
                 floorObjects.push(m);
                 return m;
             }
@@ -605,7 +628,7 @@ void loop() {
                 const m = new THREE.Mesh(g, mat);
                 m.position.set(cmX(xCm), heightM / 2, cmZ(yCm));
                 m.name = name;
-                scene.add(m);
+                track3DGroup.add(m);
                 if (detectable) tofObjects.push(m);
                 if (isFloor) floorObjects.push(m);
                 return m;
@@ -623,7 +646,7 @@ void loop() {
                 m.position.set(cmX((x1 + x2) / 2), heightM / 2, cmZ((y1 + y2) / 2));
                 m.rotation.y = Math.atan2(dz, dx);
                 m.name = name;
-                scene.add(m);
+                track3DGroup.add(m);
                 tofObjects.push(m);
                 return m;
             }
@@ -660,7 +683,7 @@ void loop() {
                 const m = new THREE.Mesh(g, mat);
                 m.position.set(cmX(xCm), 0, cmZ(yCm));
                 m.name = name;
-                scene.add(m);
+                track3DGroup.add(m);
                 floorObjects.push(m);
                 return m;
             }
@@ -675,9 +698,7 @@ void loop() {
             }
 
             // Lantai Lapangan
-            addPlaneCm(150, 150, 300, 300, fieldMat, 'arena-floor', 0.001);
-            addPlaneCm(150, 51, 2.2, 102, floorPatchMat, 'center-guide-line-cover-top', 0.006);
-            addPlaneCm(150, 254, 2.2, 92, floorPatchMat, 'center-guide-line-cover-bottom', 0.006);
+            addPlaneCm(150, 150, 300, 300, fieldMat, 'arena-floor-reference-png', 0.001, false);
 
             // Tembok Luar
             addWallLineCm(0, 0, 300, 0, 'outer-top', 3.0, 0.08, borderMat);

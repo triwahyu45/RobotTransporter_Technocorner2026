@@ -94,13 +94,12 @@ h1 {
     height: calc(100vh - 96px);
     margin: auto;
     display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(260px, .72fr) minmax(220px, .58fr);
-    grid-template-rows: minmax(0, 1fr) 132px 132px 36px;
+    grid-template-columns: minmax(470px, 1fr) minmax(285px, .52fr) minmax(210px, .38fr) minmax(220px, .42fr);
+    grid-template-rows: minmax(0, 1fr) 142px 36px;
     grid-template-areas:
-        "pad side side"
-        "analog circularity axis"
-        "vibration circularity summary"
-        "footer footer footer";
+        "pad side axis summary"
+        "analog circularity circularity vibration"
+        "footer footer footer footer";
     gap: 12px;
 }
 
@@ -145,7 +144,7 @@ h1 {
     height: 100%;
     min-height: 0;
     max-height: 100%;
-    padding: 12px;
+    padding: 11px;
     overflow: hidden;
     box-shadow: 0 22px 48px rgba(0, 0, 0, .42);
 }
@@ -163,11 +162,11 @@ h1 {
 .btn-track {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 9px 10px;
+    gap: 7px 9px;
 }
 
 .btn-chip {
-    height: 42px;
+    height: 38px;
     border: 1px solid var(--line);
     border-radius: 999px;
     background: rgba(7, 15, 24, .72);
@@ -176,7 +175,7 @@ h1 {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
     transition: .08s ease;
 }
@@ -361,7 +360,7 @@ h1 {
 }
 
 .mini-circ canvas {
-    width: min(102px, 100%);
+    width: min(88px, 100%);
     height: auto;
     aspect-ratio: 1;
     border-radius: 50%;
@@ -688,7 +687,7 @@ canvas.trail {
 
     .dashboard {
         height: calc(100vh - 86px);
-        grid-template-rows: minmax(0, 1fr) 130px 130px 34px;
+        grid-template-rows: minmax(0, 1fr) 132px 34px;
         gap: 10px;
     }
 
@@ -698,12 +697,12 @@ canvas.trail {
     }
 
     .btn-chip {
-        height: 31px;
+        height: 30px;
         font-size: 15px;
     }
 
     .btn-track {
-        gap: 5px 8px;
+        gap: 4px 7px;
     }
 
     .mini-circ canvas {
