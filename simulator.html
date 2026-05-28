@@ -190,17 +190,10 @@ void loop() {
 
     <div id="right-panel">
         <div class="header">
-            <span class="sim-title" aria-label="Simulator"></span>
+            <span class="sim-title">Transporter Arena Simulator</span>
             <div class="btn-group">
                 <button id="toggle-editor-btn" class="ui-btn">EDITOR</button>
                 <button id="toggle-overlay-btn" class="ui-btn">INFO</button>
-                <button class="ui-btn cam-preset" data-view="top">TOP</button>
-                <button class="ui-btn cam-preset" data-view="start">START</button>
-                <button class="ui-btn cam-preset" data-view="center">RAMP</button>
-                <button class="ui-btn cam-preset" data-view="finish">FINISH</button>
-                <button class="ui-btn cam-preset" data-view="left">LEFT</button>
-                <button class="ui-btn cam-preset" data-view="right">RIGHT</button>
-                <button class="ui-btn cam-preset" data-view="box">BOX</button>
                 <button id="toggle-3d-btn" class="ui-btn active-toggle">3D ON</button>
                 <button id="toggle-mode-btn" class="ui-btn">MODE: SOFTWARE</button>
                 <button id="lock-view-btn" class="ui-btn">LOCK VIEW OFF</button>
@@ -212,6 +205,12 @@ void loop() {
                 <button id="reset-view-btn" class="ui-btn">RESET VIEW</button>
                 <button id="reset-robot-btn" class="ui-btn">RESET ROBOT</button>
             </div>
+        </div>
+        <div class="view-cube" aria-label="Camera view cube">
+            <button type="button" data-view="top">Top</button>
+            <button type="button" data-view="start">Front</button>
+            <button type="button" data-view="left">Left</button>
+            <button type="button" data-view="right">Right</button>
         </div>
         <div id="status-overlay" class="monitor-panel floating-panel panel-hidden">
             <div class="monitor-top">
@@ -425,7 +424,7 @@ void loop() {
             }
         }
 
-        function setupFloatingPanel(key, panel, dragHandle, resizeHandle) {
+        function setupFloatingPanel(key, panel, dragHandle) {
             const state = panelState[key];
             let drag = null;
             let resize = null;
@@ -453,30 +452,78 @@ void loop() {
                 savePanelState();
             });
 
-            resizeHandle.addEventListener('pointerdown', (e) => {
-                resize = { x: e.clientX, y: e.clientY, startW: state.w, startH: state.h };
-                resizeHandle.setPointerCapture(e.pointerId);
-                e.preventDefault();
-            });
+            const resizeDirs = ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'];
+            resizeDirs.forEach((dir) => {
+                const handle = document.createElement('div');
+                handle.className = `panel-resize-edge panel-resize-${dir}`;
+                handle.dataset.resize = dir;
+                panel.appendChild(handle);
 
-            resizeHandle.addEventListener('pointermove', (e) => {
-                if (!resize) return;
-                state.w = resize.startW + e.clientX - resize.x;
-                state.h = resize.startH + e.clientY - resize.y;
-                applyPanelState(key, panel);
-            });
+                handle.addEventListener('pointerdown', (e) => {
+                    resize = {
+                        dir,
+                        x: e.clientX,
+                        y: e.clientY,
+                        startX: state.x,
+                        startY: state.y,
+                        startW: state.w,
+                        startH: state.h
+                    };
+                    handle.setPointerCapture(e.pointerId);
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
 
-            resizeHandle.addEventListener('pointerup', (e) => {
-                if (!resize) return;
-                resize = null;
-                try { resizeHandle.releasePointerCapture(e.pointerId); } catch (err) { }
-                savePanelState();
+                handle.addEventListener('pointermove', (e) => {
+                    if (!resize || resize.dir !== dir) return;
+                    const dx = e.clientX - resize.x;
+                    const dy = e.clientY - resize.y;
+                    let nextX = resize.startX;
+                    let nextY = resize.startY;
+                    let nextW = resize.startW;
+                    let nextH = resize.startH;
+
+                    if (dir.includes('e')) nextW = resize.startW + dx;
+                    if (dir.includes('s')) nextH = resize.startH + dy;
+                    if (dir.includes('w')) {
+                        nextW = resize.startW - dx;
+                        nextX = resize.startX + dx;
+                    }
+                    if (dir.includes('n')) {
+                        nextH = resize.startH - dy;
+                        nextY = resize.startY + dy;
+                    }
+
+                    const minW = 290;
+                    const minH = 260;
+                    if (nextW < minW) {
+                        if (dir.includes('w')) nextX -= minW - nextW;
+                        nextW = minW;
+                    }
+                    if (nextH < minH) {
+                        if (dir.includes('n')) nextY -= minH - nextH;
+                        nextH = minH;
+                    }
+
+                    state.x = nextX;
+                    state.y = nextY;
+                    state.w = nextW;
+                    state.h = nextH;
+                    applyPanelState(key, panel);
+                });
+
+                handle.addEventListener('pointerup', (e) => {
+                    if (!resize || resize.dir !== dir) return;
+                    resize = null;
+                    try { handle.releasePointerCapture(e.pointerId); } catch (err) { }
+                    savePanelState();
+                });
             });
         }
 
         loadPanelState();
-        setupFloatingPanel('editor', leftPanel, leftPanel.querySelector('.header'), document.getElementById('resizer'));
-        setupFloatingPanel('info', overlay, overlay.querySelector('.monitor-top'), document.getElementById('info-resizer'));
+        setupFloatingPanel('editor', leftPanel, leftPanel.querySelector('.header'));
+        setupFloatingPanel('info', overlay, overlay.querySelector('.monitor-top'));
         applyPanelState('editor', leftPanel);
         applyPanelState('info', overlay);
         refreshPanelButtons();
@@ -522,7 +569,7 @@ void loop() {
             controls.update();
         }
 
-        document.querySelectorAll('.cam-preset').forEach(btn => {
+        document.querySelectorAll('[data-view]').forEach(btn => {
             btn.addEventListener('click', () => setCameraPreset(btn.dataset.view));
         });
         const initialView = new URLSearchParams(window.location.search).get('view');
@@ -571,8 +618,9 @@ void loop() {
             trackTexture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
             const fieldMat = new THREE.MeshPhongMaterial({
-                color: 0xffffff, map: trackTexture, shininess: 0
+                color: 0xbec3c0, map: trackTexture, shininess: 0
             });
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0xd8f3ff, transparent: true, opacity: 0.34 });
             const wallMat = new THREE.MeshPhongMaterial({
                 color: 0x171a1f, emissive: 0x05080c, shininess: 35
             });
@@ -592,6 +640,17 @@ void loop() {
             function makeMat(c, opacity = 1, basic = false) {
                 if (basic) return new THREE.MeshBasicMaterial({ color: c.hex ?? c, transparent: opacity < 1, opacity, side: THREE.DoubleSide });
                 return new THREE.MeshPhongMaterial({ color: c.hex ?? c, emissive: 0x222222, transparent: opacity < 1, opacity, shininess: 24 });
+            }
+
+            function addMeshEdges(mesh, thresholdAngle = 18) {
+                const edgeGeo = new THREE.EdgesGeometry(mesh.geometry, thresholdAngle);
+                const edge = new THREE.LineSegments(edgeGeo, edgeMat);
+                edge.position.copy(mesh.position);
+                edge.rotation.copy(mesh.rotation);
+                edge.scale.copy(mesh.scale);
+                edge.name = `${mesh.name}-wire-edge`;
+                track3DGroup.add(edge);
+                return edge;
             }
 
             function addTrackLabel(text, xCm, yCm, color = '#222222', scaleX = 0.22, scaleY = 0.055, yM = 0.045) {
@@ -629,6 +688,7 @@ void loop() {
                 m.position.set(cmX(xCm), heightM / 2, cmZ(yCm));
                 m.name = name;
                 track3DGroup.add(m);
+                addMeshEdges(m);
                 if (detectable) tofObjects.push(m);
                 if (isFloor) floorObjects.push(m);
                 return m;
@@ -647,6 +707,7 @@ void loop() {
                 m.rotation.y = Math.atan2(dz, dx);
                 m.name = name;
                 track3DGroup.add(m);
+                addMeshEdges(m);
                 tofObjects.push(m);
                 return m;
             }
@@ -684,6 +745,7 @@ void loop() {
                 m.position.set(cmX(xCm), 0, cmZ(yCm));
                 m.name = name;
                 track3DGroup.add(m);
+                addMeshEdges(m, 8);
                 floorObjects.push(m);
                 return m;
             }
