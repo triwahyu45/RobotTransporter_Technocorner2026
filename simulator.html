@@ -13,7 +13,7 @@
 
 <body>
     <nav class="app-nav" aria-label="Navigasi halaman">
-        <button class="app-nav-toggle" type="button" aria-expanded="false">MENU</button>
+        <button class="app-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span></button>
         <div class="app-nav-links">
             <a href="index.html">Home</a>
             <a class="active" href="simulator.html">Simulator</a>
@@ -190,10 +190,16 @@ void loop() {
 
     <div id="right-panel">
         <div class="header">
-            <span>3D Transporter TC 2026 Track Monitor</span>
+            <span class="sim-title" aria-label="Simulator"></span>
             <div class="btn-group">
                 <button id="toggle-editor-btn" class="ui-btn">EDITOR</button>
                 <button id="toggle-overlay-btn" class="ui-btn">INFO</button>
+                <button class="ui-btn cam-preset" data-view="top">TOP</button>
+                <button class="ui-btn cam-preset" data-view="start">START</button>
+                <button class="ui-btn cam-preset" data-view="center">RAMP</button>
+                <button class="ui-btn cam-preset" data-view="finish">FINISH</button>
+                <button class="ui-btn cam-preset" data-view="left">LEFT</button>
+                <button class="ui-btn cam-preset" data-view="right">RIGHT</button>
                 <button id="toggle-mode-btn" class="ui-btn">MODE: SOFTWARE</button>
                 <button id="lock-view-btn" class="ui-btn">LOCK VIEW OFF</button>
                 <button id="robot-mouse-btn" class="ui-btn">ROBOT MOUSE OFF</button>
@@ -496,6 +502,29 @@ void loop() {
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true; controls.dampingFactor = 0.05; controls.maxPolarAngle = Math.PI / 2;
 
+        const CAMERA_PRESETS = {
+            top: { pos: [0, 4.1, 0.001], target: [0, 0, 0] },
+            start: { pos: [0, 0.72, 1.36], target: [0, 0.02, 0.78] },
+            center: { pos: [-0.78, 0.82, 0.28], target: [0, 0.035, 0.02] },
+            finish: { pos: [0, 0.68, -1.18], target: [0, 0.035, -1.40] },
+            left: { pos: [-1.33, 0.72, 0.12], target: [-0.42, 0.025, 0.02] },
+            right: { pos: [1.33, 0.72, 0.12], target: [0.42, 0.025, 0.02] }
+        };
+
+        function setCameraPreset(name) {
+            const preset = CAMERA_PRESETS[name];
+            if (!preset) return;
+            camera.position.set(...preset.pos);
+            controls.target.set(...preset.target);
+            controls.update();
+        }
+
+        document.querySelectorAll('.cam-preset').forEach(btn => {
+            btn.addEventListener('click', () => setCameraPreset(btn.dataset.view));
+        });
+        const initialView = new URLSearchParams(window.location.search).get('view');
+        if (initialView) setCameraPreset(initialView);
+
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
         directionalLight.position.set(5, 10, 5); scene.add(directionalLight);
         scene.add(new THREE.AmbientLight(0xffffff, 0.8));
@@ -520,6 +549,7 @@ void loop() {
             const fieldMat = new THREE.MeshPhongMaterial({
                 color: 0xffffff, map: trackTexture, shininess: 0
             });
+            const floorPatchMat = new THREE.MeshBasicMaterial({ color: 0xe8eaeb, side: THREE.DoubleSide });
             const wallMat = new THREE.MeshPhongMaterial({
                 color: 0x171a1f, emissive: 0x05080c, shininess: 35
             });
@@ -527,9 +557,9 @@ void loop() {
                 color: 0x05070a, emissive: 0x000000, shininess: 30
             });
             const startMat = new THREE.MeshBasicMaterial({ color: 0x1efc89, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
-            const finishMat = new THREE.MeshBasicMaterial({ color: 0x1fb8ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
-            const rampLightMat = new THREE.MeshPhongMaterial({ color: 0xb9bec3, shininess: 18, side: THREE.DoubleSide, transparent: true, opacity: 0.72 });
-            const topFloorMat = new THREE.MeshPhongMaterial({ color: 0x55585f, shininess: 12, transparent: true, opacity: 0.72 });
+            const finishMat = new THREE.MeshPhongMaterial({ color: 0x18b7ff, emissive: 0x07354a, shininess: 18 });
+            const rampLightMat = new THREE.MeshPhongMaterial({ color: 0xb9bec3, shininess: 18, side: THREE.DoubleSide });
+            const topFloorMat = new THREE.MeshPhongMaterial({ color: 0x55585f, shininess: 16 });
 
             const colors = {
                 orange: { hex: 0xffaa19 }, blue: { hex: 0x2426d9 }, pink: { hex: 0xe767e6 },
@@ -646,6 +676,8 @@ void loop() {
 
             // Lantai Lapangan
             addPlaneCm(150, 150, 300, 300, fieldMat, 'arena-floor', 0.001);
+            addPlaneCm(150, 51, 2.2, 102, floorPatchMat, 'center-guide-line-cover-top', 0.006);
+            addPlaneCm(150, 254, 2.2, 92, floorPatchMat, 'center-guide-line-cover-bottom', 0.006);
 
             // Tembok Luar
             addWallLineCm(0, 0, 300, 0, 'outer-top', 3.0, 0.08, borderMat);
@@ -664,8 +696,8 @@ void loop() {
             addRaisedPlatformCm(150, 150, 35, 100, 0.05, topFloorMat, 'center-top-platform');
             addRampWedgeCm(116.25, 150, 32.5, 50, 0.05, rampLightMat, 'left-light-ramp', 'high_x1');
             addRampWedgeCm(183.75, 150, 32.5, 50, 0.05, rampLightMat, 'right-light-ramp', 'high_x0');
-            addRampWedgeCm(150, 94, 35, 12, 0.05, rampLightMat, 'upper-light-ramp', 'high_z0');
-            addRampWedgeCm(150, 206, 35, 12, 0.05, rampLightMat, 'lower-light-ramp', 'high_z1');
+            addRampWedgeCm(150, 94, 35, 12, 0.05, rampLightMat, 'upper-light-ramp', 'high_z1');
+            addRampWedgeCm(150, 206, 35, 12, 0.05, rampLightMat, 'lower-light-ramp', 'high_z0');
 
             // Tembok maze diekstrusi dari pixel garis hitam texture, bukan koordinat kira-kira.
             const isOuterEdgeRect = ([x, y, w, h]) => {

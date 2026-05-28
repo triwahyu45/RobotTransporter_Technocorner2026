@@ -598,6 +598,14 @@ body {
     gap: 12px;
 }
 
+.sim-title {
+    display: none;
+}
+
+.cam-preset {
+    min-width: 54px;
+}
+
 /* Floating simulator windows */
 .floating-panel {
     position: absolute !important;

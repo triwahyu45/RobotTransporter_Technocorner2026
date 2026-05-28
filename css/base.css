@@ -37,6 +37,39 @@
     font: 900 11px "Segoe UI", Arial, sans-serif;
     letter-spacing: .12em;
     transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    display: inline-grid;
+    place-items: center;
+    font-size: 0;
+}
+
+.app-nav-toggle span,
+.app-nav-toggle::before,
+.app-nav-toggle::after {
+    content: "";
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 10px rgba(51, 246, 184, .22);
+    transition: transform .16s ease, opacity .16s ease;
+}
+
+.app-nav-toggle {
+    grid-template-rows: repeat(3, 2px);
+    align-content: center;
+    row-gap: 4px;
+}
+
+.app-nav.open .app-nav-toggle span {
+    opacity: 0;
+}
+
+.app-nav.open .app-nav-toggle::before {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.app-nav.open .app-nav-toggle::after {
+    transform: translateY(-6px) rotate(-45deg);
 }
 
 .app-nav-toggle:hover,

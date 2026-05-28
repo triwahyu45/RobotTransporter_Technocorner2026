@@ -94,12 +94,13 @@ h1 {
     height: calc(100vh - 96px);
     margin: auto;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    grid-template-rows: minmax(0, 1fr) 224px 36px;
+    grid-template-columns: minmax(0, 1.55fr) minmax(260px, .72fr) minmax(220px, .58fr);
+    grid-template-rows: minmax(0, 1fr) 132px 132px 36px;
     grid-template-areas:
-        "pad side"
-        "tools tools"
-        "footer footer";
+        "pad side side"
+        "analog circularity axis"
+        "vibration circularity summary"
+        "footer footer footer";
     gap: 12px;
 }
 
@@ -140,7 +141,8 @@ h1 {
 
 .side-panel {
     grid-area: side;
-    align-self: start;
+    align-self: stretch;
+    height: 100%;
     min-height: 0;
     max-height: 100%;
     padding: 12px;
@@ -165,7 +167,7 @@ h1 {
 }
 
 .btn-chip {
-    height: 40px;
+    height: 42px;
     border: 1px solid var(--line);
     border-radius: 999px;
     background: rgba(7, 15, 24, .72);
@@ -227,17 +229,33 @@ h1 {
 }
 
 .tools-grid {
-    grid-area: tools;
-    display: grid;
-    grid-template-columns: minmax(170px, .85fr) minmax(320px, 1.28fr) minmax(210px, 1fr) minmax(190px, .9fr) minmax(220px, 1fr);
-    gap: 12px;
-    min-height: 0;
+    display: contents;
+}
+
+.tools-grid .tool-card:nth-child(1) {
+    grid-area: analog;
+}
+
+.tools-grid .tool-card:nth-child(2) {
+    grid-area: circularity;
+}
+
+.tools-grid .tool-card:nth-child(3) {
+    grid-area: vibration;
+}
+
+.tools-grid .tool-card:nth-child(4) {
+    grid-area: axis;
+}
+
+.tools-grid .tool-card:nth-child(5) {
+    grid-area: summary;
 }
 
 .tool-card {
     min-width: 0;
     height: 100%;
-    padding: 12px;
+    padding: 10px 12px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -288,9 +306,9 @@ h1 {
 
 .legend {
     margin-top: auto;
-    font: 16px 'Share Tech Mono', monospace;
+    font: 12px 'Share Tech Mono', monospace;
     color: #bfd3e9;
-    line-height: 2.25;
+    line-height: 1.45;
 }
 
 .legend i {
@@ -343,7 +361,7 @@ h1 {
 }
 
 .mini-circ canvas {
-    width: min(112px, 100%);
+    width: min(102px, 100%);
     height: auto;
     aspect-ratio: 1;
     border-radius: 50%;
@@ -362,9 +380,9 @@ h1 {
 
 .axis-list,
 .summary-list {
-    font: 15px 'Share Tech Mono', monospace;
+    font: 13px 'Share Tech Mono', monospace;
     color: #c7d9ee;
-    line-height: 1.55;
+    line-height: 1.42;
 }
 
 .summary-list {
@@ -442,12 +460,12 @@ h1 {
 }
 
 .trigger-zone.left {
-    left: 42px;
+    left: 20px;
     top: 55px;
 }
 
 .trigger-zone.right {
-    right: 42px;
+    right: 18px;
     top: 55px;
 }
 
@@ -670,7 +688,7 @@ canvas.trail {
 
     .dashboard {
         height: calc(100vh - 86px);
-        grid-template-rows: minmax(0, 1fr) 212px 34px;
+        grid-template-rows: minmax(0, 1fr) 130px 130px 34px;
         gap: 10px;
     }
 
@@ -680,16 +698,16 @@ canvas.trail {
     }
 
     .btn-chip {
-        height: 32px;
-        font-size: 17px;
+        height: 31px;
+        font-size: 15px;
     }
 
     .btn-track {
-        gap: 7px 8px;
+        gap: 5px 8px;
     }
 
     .mini-circ canvas {
-        width: min(82px, 100%);
+        width: min(76px, 100%);
     }
 
     .mini-circ {
@@ -701,7 +719,7 @@ canvas.trail {
     }
 
     .ui-btn {
-        min-height: 34px;
+        min-height: 31px;
         font-size: 16px;
     }
 
@@ -711,6 +729,30 @@ canvas.trail {
 
     .stick-info {
         font-size: 0;
+    }
+
+    .axis-list,
+    .summary-list,
+    .poll-box {
+        font-size: 11px;
+    }
+
+    .axis-list,
+    .summary-list {
+        line-height: 1.08;
+    }
+
+    .poll-box {
+        padding: 4px 8px;
+    }
+
+    .tools-grid .tool-card:nth-child(1) .row {
+        margin-bottom: 8px !important;
+    }
+
+    .legend {
+        font-size: 11px;
+        line-height: 1.28;
     }
 }
 
@@ -733,6 +775,7 @@ canvas.trail {
     .dashboard {
         width: min(100%, 900px);
         height: auto;
+        display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: minmax(340px, 56vh) auto auto auto;
         grid-template-areas: "pad" "side" "tools" "footer";
@@ -746,7 +789,13 @@ canvas.trail {
     }
 
     .tools-grid {
+        grid-area: tools;
+        display: grid;
         grid-template-columns: repeat(2, minmax(240px, 1fr));
+    }
+
+    .tools-grid .tool-card:nth-child(n) {
+        grid-area: auto;
     }
 
     .tool-card {
