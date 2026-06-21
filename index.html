@@ -810,11 +810,20 @@
                 // Enable shadow maps for CAD meshes
                 cadModel.traverse((node) => {
                     if (node.isMesh) {
+                        const nameLower = node.name.toLowerCase();
+                        // Hide the 20x20cm calibration base box
+                        if (nameLower.includes('solid1_2') || nameLower.includes('base 2.0')) {
+                            node.visible = false;
+                            node.castShadow = false;
+                            node.receiveShadow = false;
+                            return;
+                        }
+
                         node.castShadow = true;
                         node.receiveShadow = true;
                         // Boost standard materials look
                         if (node.material) {
-                            node.material.metalness = node.material.name.toLowerCase().includes('metal') || node.material.name.toLowerCase().includes('aluminum') ? 0.8 : 0.2;
+                            node.material.metalness = nameLower.includes('metal') || nameLower.includes('aluminum') ? 0.8 : 0.2;
                             node.material.roughness = 0.3;
                         }
                     }
