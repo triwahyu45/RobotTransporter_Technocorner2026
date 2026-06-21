@@ -688,17 +688,17 @@
         scene.add(ground);
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
         dirLight.position.set(1.5, 3, 1.5);
         dirLight.castShadow = true;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
         scene.add(dirLight);
 
-        const pointLight = new THREE.PointLight(0x00f0ff, 2.0, 1.2);
+        const pointLight = new THREE.PointLight(0xffffff, 3.0, 1.2);
         pointLight.position.set(0, 0.12, 0);
         scene.add(pointLight);
 
@@ -939,7 +939,7 @@
 
         function update3DRobotJoints() {
             // --- 1. FRONT LIFT & CLAW CALCULATIONS ---
-            const targetLiftFrontAngle = UI_STATE.liftFrontMin + UI_STATE.frontLiftThrottle * (UI_STATE.liftFrontMax - UI_STATE.liftFrontMin);
+            const targetLiftFrontAngle = UI_STATE.liftFrontMax + UI_STATE.frontLiftThrottle * (UI_STATE.liftFrontMin - UI_STATE.liftFrontMax);
             const radLiftF = (targetLiftFrontAngle - 90) * Math.PI / 180;
 
             const clawFrontAngle = UI_STATE.frontClawClosed ? UI_STATE.clawFrontMax : UI_STATE.clawFrontMin;
@@ -947,7 +947,7 @@
             const radClawF = clawOpenRatio * 0.7; // max open 0.7 rad (~40 deg)
 
             // --- 2. REAR LIFT & CLAW CALCULATIONS ---
-            const targetLiftRearAngle = UI_STATE.liftRearMin + UI_STATE.rearLiftThrottle * (UI_STATE.liftRearMax - UI_STATE.liftRearMin);
+            const targetLiftRearAngle = UI_STATE.liftRearMax + UI_STATE.rearLiftThrottle * (UI_STATE.liftRearMin - UI_STATE.liftRearMax);
             const radLiftR = -(targetLiftRearAngle - 90) * Math.PI / 180;
 
             const clawRearAngle = UI_STATE.rearClawClosed ? UI_STATE.clawRearMax : UI_STATE.clawRearMin;
@@ -991,8 +991,8 @@
                 ledMat.color.setHex(0xffaa00);
                 pointLight.color.setHex(0xffaa00);
             } else {
-                ledMat.color.setHex(0x00ffcc);
-                pointLight.color.setHex(0x00f0ff);
+                ledMat.color.setHex(0xffffff);
+                pointLight.color.setHex(0xffffff);
             }
         }
 
@@ -1199,12 +1199,12 @@
                         if (data.front_lift != null) {
                             UI_STATE.frontLiftThrottle = data.front_lift;
                             sliderTestLiftF.value = data.front_lift;
-                            lblTestLiftF.textContent = data.front_lift.toFixed(2);
+                            lblTestLiftF.textContent = data.front_lift.toFixed(2) + (data.front_lift === 1.0 ? ' (UP)' : data.front_lift === 0.0 ? ' (DOWN)' : '');
                         }
                         if (data.rear_lift != null) {
                             UI_STATE.rearLiftThrottle = data.rear_lift;
                             sliderTestLiftR.value = data.rear_lift;
-                            lblTestLiftR.textContent = data.rear_lift.toFixed(2);
+                            lblTestLiftR.textContent = data.rear_lift.toFixed(2) + (data.rear_lift === 1.0 ? ' (UP)' : data.rear_lift === 0.0 ? ' (DOWN)' : '');
                         }
                         if (data.front_claw != null) {
                             UI_STATE.frontClawClosed = data.front_claw === 1;
