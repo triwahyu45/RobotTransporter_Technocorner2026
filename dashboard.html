@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transporter TC2026 - Calibration Dashboard</title>
+    <link rel="stylesheet" href="css/base.css">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-color: #00f0ff;
+            --accent-glow: rgba(0, 240, 255, 0.4);
+            --success-color: #32ffb1;
+            --warning-color: #ffaa00;
+            --danger-color: #ff4a5a;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .dashboard-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ─── KIRI: 3D Viewport ────────────────────────────────────────── */
+        .viewport-section {
+            flex: 1;
+            position: relative;
+            height: 100%;
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+        }
+
+        #canvas3d {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .viewport-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+
+        .viewport-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .viewport-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 4px 0 0 0;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 14px;
+            border-radius: 30px;
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--danger-color);
+            box-shadow: 0 0 8px var(--danger-color);
+        }
+
+        .status-dot.connected {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        .status-dot.connecting {
+            background-color: var(--warning-color);
+            box-shadow: 0 0 8px var(--warning-color);
+            animation: pulse 1s infinite alternate;
+        }
+
+        /* ─── KANAN: Panel Kontrol ───────────────────────────────────────── */
+        .control-panel {
+            width: 480px;
+            height: 100%;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--panel-border);
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .panel-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mdns-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .host-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 8px 12px;
+            font-family: monospace;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .host-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: #0b0f19;
+            border: none;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            background: #00d6e6;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            border: none;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background: #e03b4a;
+        }
+
+        .panel-content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            flex: 1;
+        }
+
+        .section-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--accent-color);
+            margin: 0 0 4px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* ─── Parameter Sliders ────────────────────────────────────────── */
+        .config-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .label-val {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .val-num {
+            font-family: monospace;
+            color: var(--success-color);
+            font-weight: 600;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 0 6px var(--accent-glow);
+            transition: transform 0.1s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* ─── Grid layouts ────────────────────────────────────────────── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .tel-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--panel-border);
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .tel-lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .tel-val {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 4px;
+            color: #ffffff;
+        }
+
+        /* ─── Footer aksi ──────────────────────────────────────────────── */
+        .panel-footer {
+            padding: 24px;
+            border-top: 1px solid var(--panel-border);
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        /* ─── Responsive 3D Canvas reset button ───────────────────────── */
+        .btn-view-reset {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--panel-border);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="app-nav" aria-label="Navigasi halaman" style="background: rgba(17, 24, 39, 0.9);">
+        <button class="app-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><span></span></button>
+        <div class="app-nav-links">
+            <a href="index.html">Home</a>
+            <a href="simulator.html">Simulator</a>
+            <a href="stick_test.html">Stick Test</a>
+            <a class="active" href="dashboard.html">Tuning</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- ─── KIRI: Visualisasi 3D Robot ──────────────────────────────── -->
+        <section class="viewport-section">
+            <div class="viewport-overlay">
+                <h1 class="viewport-title">Robot Transporter 3D</h1>
+                <p class="viewport-subtitle">Visualisasi Sendi Gripper & Orientasi MPU6050</p>
+            </div>
+            
+            <div class="connection-status">
+                <div id="conn-dot" class="status-dot"></div>
+                <span id="conn-lbl">Terputus</span>
+            </div>
+
+            <button id="btn-reset-view" class="btn-view-reset">Reset View</button>
+            <div id="canvas3d"></div>
+        </section>
+
+        <!-- ─── KANAN: Panel Konfigurasi ────────────────────────────────── -->
+        <aside class="control-panel">
+            <!-- Mixed Content Warning Banner (untuk GitHub Pages HTTPS) -->
+            <div id="https-warning-banner" style="display: none; background: rgba(239, 68, 68, 0.12); border-bottom: 1px solid rgba(239, 68, 68, 0.25); padding: 18px; font-size: 12px; line-height: 1.5; color: #ff9eaf; backdrop-filter: blur(10px);">
+                <div style="font-weight: 700; text-transform: uppercase; font-size: 10px; color: #ff4a5a; letter-spacing: 0.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ff4a5a;"></span>
+                    Perhatian: Akses HTTPS Terdeteksi (GitHub Pages)
+                </div>
+                Agar browser dapat berkomunikasi dengan robot di jaringan lokal, Anda **harus** mengizinkan <strong>"Insecure content"</strong> di browser Anda:
+                <ol style="margin: 6px 0 6px 18px; padding: 0;">
+                    <li>Klik ikon gembok/pengaturan situs di sebelah URL browser Anda.</li>
+                    <li>Pilih <strong>Site settings / Pengaturan situs</strong>.</li>
+                    <li>Cari menu <strong>Insecure content / Konten tidak aman</strong> di bagian bawah, lalu ubah nilainya menjadi <strong>Allow / Izinkan</strong>.</li>
+                    <li>Muat ulang (refresh) halaman ini.</li>
+                </ol>
+                <div style="text-align: right; margin-top: 8px;">
+                    <button id="btn-close-https-warn" class="btn" style="padding: 4px 10px; font-size: 10px; height: auto; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">Paham & Tutup</button>
+                </div>
+            </div>
+            <div class="panel-header">
+                <label style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-muted);">Alamat mDNS Robot</label>
+                <div class="mdns-row">
+                    <input id="mdns-host" class="host-input" value="robot.local" placeholder="robot.local atau IP" autocomplete="off">
+                    <button id="btn-connect" class="btn btn-primary">Connect</button>
+                </div>
+            </div>
+
+            <div class="panel-content">
+                <!-- 1. Live Telemetry -->
+                <div class="section-card">
+                    <h2 class="section-title">Live Telemetry</h2>
+                    <div class="telemetry-grid">
+                        <div class="tel-card">
+                            <div class="tel-lbl">Yaw</div>
+                            <div id="tel-yaw" class="tel-val">0.0°</div>
+                        </div>
+                        <div class="tel-card">
+                            <div class="tel-lbl">Pitch</div>
+                            <div id="tel-pitch" class="tel-val">0.0°</div>
+                        </div>
+                        <div class="tel-card">
+                            <div class="tel-lbl">Roll</div>
+                            <div id="tel-roll" class="tel-val">0.0°</div>
+                        </div>
+                    </div>
+                    <button id="btn-zero-yaw" class="btn" style="width: 100%;">Zero Yaw / Reset IMU</button>
+                </div>
+
+                <!-- 2. PID Tuning -->
+                <div class="section-card">
+                    <h2 class="section-title">PID Angle Lock</h2>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Proportional (Kp)</span>
+                            <span id="lbl-kp" class="val-num">1.15</span>
+                        </div>
+                        <input id="slider-kp" class="slider" type="range" min="0.0" max="4.0" step="0.05" value="1.15">
+                    </div>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Integral (Ki)</span>
+                            <span id="lbl-ki" class="val-num">0.00</span>
+                        </div>
+                        <input id="slider-ki" class="slider" type="range" min="0.0" max="1.0" step="0.01" value="0.00">
+                    </div>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Derivative (Kd)</span>
+                            <span id="lbl-kd" class="val-num">0.035</span>
+                        </div>
+                        <input id="slider-kd" class="slider" type="range" min="0.0" max="0.5" step="0.005" value="0.035">
+                    </div>
+                </div>
+
+                <!-- 3. Gripper Depan -->
+                <div class="section-card">
+                    <h2 class="section-title">Gripper Depan (S1 & S3)</h2>
+                    <div class="grid-2">
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Claw MIN (Buka)</span>
+                                <span id="lbl-claw-f-min" class="val-num">70°</span>
+                            </div>
+                            <input id="slider-claw-f-min" class="slider" type="range" min="0" max="180" step="1" value="70">
+                        </div>
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Claw MAX (Tutup)</span>
+                                <span id="lbl-claw-f-max" class="val-num">125°</span>
+                            </div>
+                            <input id="slider-claw-f-max" class="slider" type="range" min="0" max="180" step="1" value="125">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Lifter MIN (UP)</span>
+                                <span id="lbl-lift-f-min" class="val-num">30°</span>
+                            </div>
+                            <input id="slider-lift-f-min" class="slider" type="range" min="0" max="180" step="1" value="30">
+                        </div>
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Lifter MAX (DOWN)</span>
+                                <span id="lbl-lift-f-max" class="val-num">120°</span>
+                            </div>
+                            <input id="slider-lift-f-max" class="slider" type="range" min="0" max="180" step="1" value="120">
+                        </div>
+                    </div>
+                    <!-- Manual test slider -->
+                    <div class="grid-2" style="border-top: 1px solid var(--panel-border); padding-top: 12px; margin-top: 4px;">
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span style="font-size: 11px; color: var(--text-muted);">Test Claw</span>
+                                <span id="lbl-test-claw-f" style="font-size: 11px;" class="val-num">CLOSED</span>
+                            </div>
+                            <button id="btn-test-claw-f" class="btn" style="padding: 4px; font-size: 11px;">Toggle</button>
+                        </div>
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span style="font-size: 11px; color: var(--text-muted);">Test Lifter</span>
+                                <span id="lbl-test-lift-f" style="font-size: 11px;" class="val-num">1.00 (UP)</span>
+                            </div>
+                            <input id="slider-test-lift-f" class="slider" type="range" min="0.0" max="1.0" step="0.05" value="1.0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Gripper Belakang -->
+                <div class="section-card">
+                    <h2 class="section-title">Gripper Belakang (S2 & S4)</h2>
+                    <div class="grid-2">
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Claw MIN (Buka)</span>
+                                <span id="lbl-claw-r-min" class="val-num">70°</span>
+                            </div>
+                            <input id="slider-claw-r-min" class="slider" type="range" min="0" max="180" step="1" value="70">
+                        </div>
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Claw MAX (Tutup)</span>
+                                <span id="lbl-claw-r-max" class="val-num">125°</span>
+                            </div>
+                            <input id="slider-claw-r-max" class="slider" type="range" min="0" max="180" step="1" value="125">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Lifter MIN (UP)</span>
+                                <span id="lbl-lift-r-min" class="val-num">40°</span>
+                            </div>
+                            <input id="slider-lift-r-min" class="slider" type="range" min="0" max="180" step="1" value="40">
+                        </div>
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span>Lifter MAX (DOWN)</span>
+                                <span id="lbl-lift-r-max" class="val-num">130°</span>
+                            </div>
+                            <input id="slider-lift-r-max" class="slider" type="range" min="0" max="180" step="1" value="130">
+                        </div>
+                    </div>
+                    <!-- Manual test slider -->
+                    <div class="grid-2" style="border-top: 1px solid var(--panel-border); padding-top: 12px; margin-top: 4px;">
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span style="font-size: 11px; color: var(--text-muted);">Test Claw</span>
+                                <span id="lbl-test-claw-r" style="font-size: 11px;" class="val-num">CLOSED</span>
+                            </div>
+                            <button id="btn-test-claw-r" class="btn" style="padding: 4px; font-size: 11px;">Toggle</button>
+                        </div>
+                        <div class="config-row">
+                            <div class="label-val">
+                                <span style="font-size: 11px; color: var(--text-muted);">Test Lifter</span>
+                                <span id="lbl-test-lift-r" style="font-size: 11px;" class="val-num">1.00 (UP)</span>
+                            </div>
+                            <input id="slider-test-lift-r" class="slider" type="range" min="0.0" max="1.0" step="0.05" value="1.0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Anti-Tip Limits -->
+                <div class="section-card">
+                    <h2 class="section-title">Anti-Tip Limits</h2>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Pitch Forward (Depan)</span>
+                            <span id="lbl-tip-pitch-f" class="val-num">45.0°</span>
+                        </div>
+                        <input id="slider-tip-pitch-f" class="slider" type="range" min="15.0" max="75.0" step="0.5" value="45.0">
+                    </div>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Pitch Backward (Belakang)</span>
+                            <span id="lbl-tip-pitch-b" class="val-num">-45.0°</span>
+                        </div>
+                        <input id="slider-tip-pitch-b" class="slider" type="range" min="-75.0" max="-15.0" step="0.5" value="-45.0">
+                    </div>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Roll Sideways (Samping)</span>
+                            <span id="lbl-tip-roll" class="val-num">45.0°</span>
+                        </div>
+                        <input id="slider-tip-roll" class="slider" type="range" min="15.0" max="75.0" step="0.5" value="45.0">
+                    </div>
+                    <div class="config-row">
+                        <div class="label-val">
+                            <span>Sideways Lift Throttle</span>
+                            <span id="lbl-tip-roll-throttle" class="val-num">0.75</span>
+                        </div>
+                        <input id="slider-tip-roll-throttle" class="slider" type="range" min="0.0" max="1.0" step="0.05" value="0.75">
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-footer">
+                <div class="grid-2">
+                    <button id="btn-read" class="btn" style="padding: 10px;">Read Config</button>
+                    <button id="btn-send" class="btn btn-primary" style="padding: 10px;">Send Config</button>
+                </div>
+                <button id="btn-reboot" class="btn btn-danger" style="padding: 10px; width: 100%;">Save & Reboot to Competition Mode</button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Load Local Vendor Scripts -->
+    <script src="vendor/three/three.min.js"></script>
+    <script src="vendor/three/OrbitControls.js"></script>
+    <script src="js/shared-nav.js"></script>
+
+    <script>
+        // ─── 1. SETUP THREE.JS 3D ENVIRONMENT ───────────────────────────
+        const container = document.getElementById('canvas3d');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0c1020, 0.05);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.01, 100);
+        camera.position.set(0.28, 0.18, 0.28);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setClearColor(0x0c1020, 1.0);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // prevent going below ground
+        controls.minDistance = 0.1;
+        controls.maxDistance = 2.0;
+        controls.target.set(0, 0.02, 0);
+
+        // Grid & Ground
+        const grid = new THREE.GridHelper(10, 50, 0x00f0ff, 0x1f2937);
+        grid.position.y = -0.001;
+        scene.add(grid);
+
+        const groundGeo = new THREE.PlaneGeometry(10, 10);
+        const groundMat = new THREE.MeshPhongMaterial({ color: 0x0b0f19, shininess: 10 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(1, 2, 1);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0x00f0ff, 1.5, 1.0);
+        pointLight.position.set(0, 0.1, 0);
+        scene.add(pointLight);
+
+        // ─── 2. PROCEDURAL ROBOT 3D MODEL ──────────────────────────────
+        // Dimensi asli: sasis 115mm x 115mm x 26mm
+        const robotGroup = new THREE.Group();
+        scene.add(robotGroup);
+
+        // Sasis (Chassis) - Aluminum box
+        const chassisGeo = new THREE.BoxGeometry(0.115, 0.026, 0.115);
+        const chassisMat = new THREE.MeshStandardMaterial({
+            color: 0x1f2937,
+            metalness: 0.8,
+            roughness: 0.3,
+            name: 'chassis'
+        });
+        const chassis = new THREE.Mesh(chassisGeo, chassisMat);
+        chassis.position.y = 0.0265; // offset roda
+        chassis.castShadow = true;
+        chassis.receiveShadow = true;
+        robotGroup.add(chassis);
+
+        // Top plate (Carbon Fiber style)
+        const plateGeo = new THREE.BoxGeometry(0.110, 0.002, 0.110);
+        const plateMat = new THREE.MeshStandardMaterial({
+            color: 0x0e1726,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const plate = new THREE.Mesh(plateGeo, plateMat);
+        plate.position.y = 0.014;
+        chassis.add(plate);
+
+        // LED Neon Status Indicator
+        const ledGeo = new THREE.BoxGeometry(0.06, 0.002, 0.006);
+        const ledMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        const led = new THREE.Mesh(ledGeo, ledMat);
+        led.position.set(0, 0.015, -0.054);
+        chassis.add(led);
+
+        // 4 Roda Omni
+        const wheelRadius = 0.0265; // 53mm diameter
+        const wheelWidth = 0.016;
+        const wheelPositions = [
+            [-0.058, 0, -0.058], // FL
+            [0.058, 0, -0.058],  // FR
+            [-0.058, 0, 0.058],  // RL
+            [0.058, 0, 0.058]   // RR
+        ];
+
+        const wheelGroup = new THREE.Group();
+        chassis.add(wheelGroup);
+
+        const wheelMat = new THREE.MeshStandardMaterial({
+            color: 0x374151,
+            metalness: 0.5,
+            roughness: 0.4
+        });
+        const rollerMat = new THREE.MeshStandardMaterial({
+            color: 0x111827,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+
+        wheelPositions.forEach((pos, i) => {
+            const wheel = new THREE.Group();
+            wheel.position.set(pos[0], -0.013, pos[2]); // relative to chassis center
+
+            // Wheel rim
+            const rimGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+            rimGeo.rotateZ(Math.PI / 2);
+            const rim = new THREE.Mesh(rimGeo, wheelMat);
+            rim.castShadow = true;
+            wheel.add(rim);
+
+            // Represent rollers around the wheel
+            for (let a = 0; a < 8; a++) {
+                const angle = (a / 8) * Math.PI * 2;
+                const roller = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.005, 0.005, 0.008, 8),
+                    rollerMat
+                );
+                roller.position.set(
+                    Math.cos(angle) * (wheelRadius - 0.002),
+                    Math.sin(angle) * (wheelRadius - 0.002),
+                    0
+                );
+                roller.rotation.z = angle + Math.PI / 2;
+                rim.add(roller);
+            }
+
+            wheelGroup.add(wheel);
+        });
+
+        // ─── GRIPPER DEPAN ASSEMBLY ──────────────────────────────────
+        const gripperFrontGroup = new THREE.Group();
+        gripperFrontGroup.position.set(0, 0.006, -0.0575); // front edge of chassis
+        chassis.add(gripperFrontGroup);
+
+        // Lifter Arm (S1)
+        const armFrontPivot = new THREE.Group();
+        gripperFrontGroup.add(armFrontPivot);
+
+        const armGeo = new THREE.BoxGeometry(0.008, 0.008, 0.065);
+        const armMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, metalness: 0.8, roughness: 0.2 });
+        
+        // Left arm bar
+        const armLeft = new THREE.Mesh(armGeo, armMat);
+        armLeft.position.set(-0.025, 0, -0.0325);
+        armLeft.castShadow = true;
+        armFrontPivot.add(armLeft);
+
+        // Right arm bar
+        const armRight = new THREE.Mesh(armGeo, armMat);
+        armRight.position.set(0.025, 0, -0.0325);
+        armRight.castShadow = true;
+        armFrontPivot.add(armRight);
+
+        // Claw Base Mount (placed at the end of the lifter arm)
+        const clawFrontBase = new THREE.Group();
+        clawFrontBase.position.set(0, 0, -0.065);
+        armFrontPivot.add(clawFrontBase);
+
+        const basePlateGeo = new THREE.BoxGeometry(0.058, 0.015, 0.010);
+        const basePlateMat = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.6 });
+        const basePlate = new THREE.Mesh(basePlateGeo, basePlateMat);
+        clawFrontBase.add(basePlate);
+
+        // Left Claw Finger (S3)
+        const clawLeftPivot = new THREE.Group();
+        clawLeftPivot.position.set(-0.022, 0, -0.005);
+        clawFrontBase.add(clawLeftPivot);
+
+        const clawFingerGeo = new THREE.BoxGeometry(0.005, 0.012, 0.035);
+        const clawFingerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 }); // Red claw
+        const clawLeftFinger = new THREE.Mesh(clawFingerGeo, clawFingerMat);
+        clawLeftFinger.position.set(0.005, 0, -0.015);
+        clawLeftPivot.add(clawLeftFinger);
+
+        // Right Claw Finger (S3)
+        const clawRightPivot = new THREE.Group();
+        clawRightPivot.position.set(0.022, 0, -0.005);
+        clawFrontBase.add(clawRightPivot);
+
+        const clawRightFinger = new THREE.Mesh(clawFingerGeo, clawFingerMat);
+        clawRightFinger.position.set(-0.005, 0, -0.015);
+        clawRightPivot.add(clawRightFinger);
+
+
+        // ─── GRIPPER BELAKANG ASSEMBLY ───────────────────────────────
+        const gripperRearGroup = new THREE.Group();
+        gripperRearGroup.position.set(0, 0.006, 0.0575); // rear edge of chassis
+        chassis.add(gripperRearGroup);
+
+        // Lifter Arm (S2)
+        const armRearPivot = new THREE.Group();
+        gripperRearGroup.add(armRearPivot);
+
+        // Left arm bar
+        const armLeftR = new THREE.Mesh(armGeo, armMat);
+        armLeftR.position.set(-0.025, 0, 0.0325);
+        armLeftR.castShadow = true;
+        armRearPivot.add(armLeftR);
+
+        // Right arm bar
+        const armRightR = new THREE.Mesh(armGeo, armMat);
+        armRightR.position.set(0.025, 0, 0.0325);
+        armRightR.castShadow = true;
+        armRearPivot.add(armRightR);
+
+        // Claw Base Mount
+        const clawRearBase = new THREE.Group();
+        clawRearBase.position.set(0, 0, 0.065);
+        armRearPivot.add(clawRearBase);
+
+        const basePlateR = new THREE.Mesh(basePlateGeo, basePlateMat);
+        clawRearBase.add(basePlateR);
+
+        // Left Claw Finger (S4)
+        const clawLeftPivotR = new THREE.Group();
+        clawLeftPivotR.position.set(-0.022, 0, 0.005);
+        clawRearBase.add(clawLeftPivotR);
+
+        const clawLeftFingerR = new THREE.Mesh(clawFingerGeo, clawFingerMat);
+        clawLeftFingerR.position.set(0.005, 0, 0.015);
+        clawLeftPivotR.add(clawLeftFingerR);
+
+        // Right Claw Finger (S4)
+        const clawRightPivotR = new THREE.Group();
+        clawRightPivotR.position.set(0.022, 0, 0.005);
+        clawRearBase.add(clawRightPivotR);
+
+        const clawRightFingerR = new THREE.Mesh(clawFingerGeo, clawFingerMat);
+        clawRightFingerR.position.set(-0.005, 0, 0.015);
+        clawRightPivotR.add(clawRightFingerR);
+
+
+        // ─── 3. STATE ANIMASI 3D MODEL ─────────────────────────────────
+        const UI_STATE = {
+            // Front Gripper
+            frontLiftThrottle: 1.0,  // 1.0 = UP, 0.0 = DOWN
+            frontClawClosed: true,
+            // Rear Gripper
+            rearLiftThrottle: 1.0,   // 1.0 = UP, 0.0 = DOWN
+            rearClawClosed: true,
+
+            // IMU
+            pitch: 0.0,
+            roll: 0.0,
+            yaw: 0.0,
+
+            // Limits (dari slider)
+            liftFrontMin: 30, // UP angle
+            liftFrontMax: 120, // DOWN angle
+            liftRearMin: 40,
+            liftRearMax: 130,
+
+            clawFrontMin: 70, // OPEN
+            clawFrontMax: 125, // CLOSE
+            clawRearMin: 70,
+            clawRearMax: 125
+        };
+
+        function update3DRobotJoints() {
+            // ─── FRONT GRIPPER ───
+            const targetLiftFrontAngle = UI_STATE.liftFrontMin + UI_STATE.frontLiftThrottle * (UI_STATE.liftFrontMax - UI_STATE.liftFrontMin);
+            const radLiftF = (targetLiftFrontAngle - 90) * Math.PI / 180;
+            armFrontPivot.rotation.x = radLiftF;
+
+            const clawFrontAngle = UI_STATE.frontClawClosed ? UI_STATE.clawFrontMax : UI_STATE.clawFrontMin;
+            const clawOpenRatio = (UI_STATE.clawFrontMax - clawFrontAngle) / (UI_STATE.clawFrontMax - UI_STATE.clawFrontMin || 1);
+            const radClawF = clawOpenRatio * 0.7; // max membuka 40 derajat (0.7 rad)
+            clawLeftPivot.rotation.y = radClawF;
+            clawRightPivot.rotation.y = -radClawF;
+
+            // ─── REAR GRIPPER ───
+            const targetLiftRearAngle = UI_STATE.liftRearMin + UI_STATE.rearLiftThrottle * (UI_STATE.liftRearMax - UI_STATE.liftRearMin);
+            const radLiftR = -(targetLiftRearAngle - 90) * Math.PI / 180;
+            armRearPivot.rotation.x = radLiftR;
+
+            const clawRearAngle = UI_STATE.rearClawClosed ? UI_STATE.clawRearMax : UI_STATE.clawRearMin;
+            const clawOpenRatioR = (UI_STATE.clawRearMax - clawRearAngle) / (UI_STATE.clawRearMax - UI_STATE.clawRearMin || 1);
+            const radClawR = clawOpenRatioR * 0.7;
+            clawLeftPivotR.rotation.y = -radClawR;
+            clawRightPivotR.rotation.y = radClawR;
+
+            // ─── IMU ORIENTATION ───
+            robotGroup.rotation.y = UI_STATE.yaw * Math.PI / 180;
+            robotGroup.rotation.x = UI_STATE.pitch * Math.PI / 180;
+            robotGroup.rotation.z = -UI_STATE.roll * Math.PI / 180;
+
+            // Efek visual bahaya jika tipping terdeteksi
+            const maxPitch = Math.max(Math.abs(UI_STATE.pitch), Math.abs(UI_STATE.roll));
+            if (maxPitch > 35) {
+                ledMat.color.setHex(0xff0044); // Merah membara
+                pointLight.color.setHex(0xff0044);
+            } else if (maxPitch > 15) {
+                ledMat.color.setHex(0xffaa00); // Jingga warning
+                pointLight.color.setHex(0xffaa00);
+            } else {
+                ledMat.color.setHex(0x00ffcc); // Normal hijau toska
+                pointLight.color.setHex(0x00f0ff);
+            }
+        }
+
+
+        // ─── 4. WEBSOCKET & HTTP API COMMUNICATION ────────────────────
+        let isConnected = false;
+        let configData = {};
+        let telemetryInterval = null;
+
+        const hostInput = document.getElementById('mdns-host');
+        const connectBtn = document.getElementById('btn-connect');
+        const connDot = document.getElementById('conn-dot');
+        const connLbl = document.getElementById('conn-lbl');
+
+        const telYaw = document.getElementById('tel-yaw');
+        const telPitch = document.getElementById('tel-pitch');
+        const telRoll = document.getElementById('tel-roll');
+
+        const sliderKp = document.getElementById('slider-kp');
+        const sliderKi = document.getElementById('slider-ki');
+        const sliderKd = document.getElementById('slider-kd');
+        const lblKp = document.getElementById('lbl-kp');
+        const lblKi = document.getElementById('lbl-ki');
+        const lblKd = document.getElementById('lbl-kd');
+
+        const sliderClawFMin = document.getElementById('slider-claw-f-min');
+        const sliderClawFMax = document.getElementById('slider-claw-f-max');
+        const sliderLiftFMin = document.getElementById('slider-lift-f-min');
+        const sliderLiftFMax = document.getElementById('slider-lift-f-max');
+        
+        const sliderClawRMin = document.getElementById('slider-claw-r-min');
+        const sliderClawRMax = document.getElementById('slider-claw-r-max');
+        const sliderLiftRMin = document.getElementById('slider-lift-r-min');
+        const sliderLiftRMax = document.getElementById('slider-lift-r-max');
+
+        const sliderTipPitchF = document.getElementById('slider-tip-pitch-f');
+        const sliderTipPitchB = document.getElementById('slider-tip-pitch-b');
+        const sliderTipRoll = document.getElementById('slider-tip-roll');
+        const sliderTipRollThrottle = document.getElementById('slider-tip-roll-throttle');
+
+        const btnTestClawF = document.getElementById('btn-test-claw-f');
+        const sliderTestLiftF = document.getElementById('slider-test-lift-f');
+        const lblTestClawF = document.getElementById('lbl-test-claw-f');
+        const lblTestLiftF = document.getElementById('lbl-test-lift-f');
+
+        const btnTestClawR = document.getElementById('btn-test-claw-r');
+        const sliderTestLiftR = document.getElementById('slider-test-lift-r');
+        const lblTestClawR = document.getElementById('lbl-test-claw-r');
+        const lblTestLiftR = document.getElementById('lbl-test-lift-r');
+
+        function bindSliderLabel(slider, label, suffix = '') {
+            slider.addEventListener('input', () => {
+                label.textContent = slider.value + suffix;
+                syncSlidersToUiState();
+                update3DRobotJoints();
+            });
+        }
+
+        bindSliderLabel(sliderKp, lblKp);
+        bindSliderLabel(sliderKi, lblKi);
+        bindSliderLabel(sliderKd, lblKd);
+
+        bindSliderLabel(sliderClawFMin, document.getElementById('lbl-claw-f-min'), '°');
+        bindSliderLabel(sliderClawFMax, document.getElementById('lbl-claw-f-max'), '°');
+        bindSliderLabel(sliderLiftFMin, document.getElementById('lbl-lift-f-min'), '°');
+        bindSliderLabel(sliderLiftFMax, document.getElementById('lbl-lift-f-max'), '°');
+
+        bindSliderLabel(sliderClawRMin, document.getElementById('lbl-claw-r-min'), '°');
+        bindSliderLabel(sliderClawRMax, document.getElementById('lbl-claw-r-max'), '°');
+        bindSliderLabel(sliderLiftRMin, document.getElementById('lbl-lift-r-min'), '°');
+        bindSliderLabel(sliderLiftRMax, document.getElementById('lbl-lift-r-max'), '°');
+
+        bindSliderLabel(sliderTipPitchF, document.getElementById('lbl-tip-pitch-f'), '°');
+        bindSliderLabel(sliderTipPitchB, document.getElementById('lbl-tip-pitch-b'), '°');
+        bindSliderLabel(sliderTipRoll, document.getElementById('lbl-tip-roll'), '°');
+        bindSliderLabel(sliderTipRollThrottle, document.getElementById('lbl-tip-roll-throttle'));
+
+        btnTestClawF.addEventListener('click', () => {
+            UI_STATE.frontClawClosed = !UI_STATE.frontClawClosed;
+            lblTestClawF.textContent = UI_STATE.frontClawClosed ? 'CLOSED' : 'OPEN';
+            btnTestClawF.style.background = UI_STATE.frontClawClosed ? 'rgba(255,255,255,0.08)' : 'var(--success-color)';
+            btnTestClawF.style.color = UI_STATE.frontClawClosed ? '#ffffff' : '#0b0f19';
+            update3DRobotJoints();
+            sendManualControl('front', 'claw', UI_STATE.frontClawClosed ? 1 : 0);
+        });
+
+        sliderTestLiftF.addEventListener('input', () => {
+            UI_STATE.frontLiftThrottle = parseFloat(sliderTestLiftF.value);
+            lblTestLiftF.textContent = UI_STATE.frontLiftThrottle.toFixed(2) + (UI_STATE.frontLiftThrottle === 1.0 ? ' (UP)' : UI_STATE.frontLiftThrottle === 0.0 ? ' (DOWN)' : '');
+            update3DRobotJoints();
+            sendManualControl('front', 'lift', UI_STATE.frontLiftThrottle);
+        });
+
+        btnTestClawR.addEventListener('click', () => {
+            UI_STATE.rearClawClosed = !UI_STATE.rearClawClosed;
+            lblTestClawR.textContent = UI_STATE.rearClawClosed ? 'CLOSED' : 'OPEN';
+            btnTestClawR.style.background = UI_STATE.rearClawClosed ? 'rgba(255,255,255,0.08)' : 'var(--success-color)';
+            btnTestClawR.style.color = UI_STATE.rearClawClosed ? '#ffffff' : '#0b0f19';
+            update3DRobotJoints();
+            sendManualControl('rear', 'claw', UI_STATE.rearClawClosed ? 1 : 0);
+        });
+
+        sliderTestLiftR.addEventListener('input', () => {
+            UI_STATE.rearLiftThrottle = parseFloat(sliderTestLiftR.value);
+            lblTestLiftR.textContent = UI_STATE.rearLiftThrottle.toFixed(2) + (UI_STATE.rearLiftThrottle === 1.0 ? ' (UP)' : UI_STATE.rearLiftThrottle === 0.0 ? ' (DOWN)' : '');
+            update3DRobotJoints();
+            sendManualControl('rear', 'lift', UI_STATE.rearLiftThrottle);
+        });
+
+        function syncSlidersToUiState() {
+            UI_STATE.liftFrontMin = parseInt(sliderLiftFMin.value);
+            UI_STATE.liftFrontMax = parseInt(sliderLiftFMax.value);
+            UI_STATE.liftRearMin = parseInt(sliderLiftRMin.value);
+            UI_STATE.liftRearMax = parseInt(sliderLiftRMax.value);
+
+            UI_STATE.clawFrontMin = parseInt(sliderClawFMin.value);
+            UI_STATE.clawFrontMax = parseInt(sliderClawFMax.value);
+            UI_STATE.clawRearMin = parseInt(sliderClawRMin.value);
+            UI_STATE.clawRearMax = parseInt(sliderClawRMax.value);
+        }
+
+        connectBtn.addEventListener('click', () => {
+            if (isConnected) {
+                disconnectFromRobot();
+            } else {
+                connectToRobot();
+            }
+        });
+
+        function updateConnectionUI(status) {
+            if (status === 'connected') {
+                isConnected = true;
+                connectBtn.textContent = 'Disconnect';
+                connectBtn.className = 'btn btn-danger';
+                connDot.className = 'status-dot connected';
+                connLbl.textContent = 'Terhubung';
+                connLbl.style.color = 'var(--success-color)';
+            } else if (status === 'connecting') {
+                connectBtn.textContent = 'Connecting...';
+                connectBtn.className = 'btn';
+                connDot.className = 'status-dot connecting';
+                connLbl.textContent = 'Menghubungkan';
+                connLbl.style.color = 'var(--warning-color)';
+            } else {
+                isConnected = false;
+                connectBtn.textContent = 'Connect';
+                connectBtn.className = 'btn btn-primary';
+                connDot.className = 'status-dot';
+                connLbl.textContent = 'Terputus';
+                connLbl.style.color = 'var(--danger-color)';
+            }
+        }
+
+        function connectToRobot() {
+            const host = hostInput.value.trim();
+            if (!host) return;
+
+            updateConnectionUI('connecting');
+            const url = `http://${host}`;
+            
+            fetch(`${url}/api/config`)
+                .then(res => res.json())
+                .then(data => {
+                    console.log('Konfigurasi diterima:', data);
+                    configData = data;
+                    applyConfigToSliders(data);
+                    updateConnectionUI('connected');
+                    startTelemetryPolling(host);
+                })
+                .catch(err => {
+                    console.error('Koneksi gagal:', err);
+                    alert(`Gagal terhubung ke http://${host}/api/config. Pastikan Anda sudah masuk ke Mode Kalibrasi (Hotspot ESP32 aktif) dan mDNS menyala.`);
+                    updateConnectionUI('disconnected');
+                });
+        }
+
+        function disconnectFromRobot() {
+            if (telemetryInterval) {
+                clearInterval(telemetryInterval);
+                telemetryInterval = null;
+            }
+            updateConnectionUI('disconnected');
+        }
+
+        function startTelemetryPolling(host) {
+            if (telemetryInterval) clearInterval(telemetryInterval);
+
+            telemetryInterval = setInterval(() => {
+                fetch(`http://${host}/api/telemetry`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.yaw != null) {
+                            UI_STATE.yaw = data.yaw;
+                            telYaw.textContent = data.yaw.toFixed(1) + '°';
+                        }
+                        if (data.pitch != null) {
+                            UI_STATE.pitch = data.pitch;
+                            telPitch.textContent = data.pitch.toFixed(1) + '°';
+                        }
+                        if (data.roll != null) {
+                            UI_STATE.roll = data.roll;
+                            telRoll.textContent = data.roll.toFixed(1) + '°';
+                        }
+
+                        if (data.front_lift != null) {
+                            UI_STATE.frontLiftThrottle = data.front_lift;
+                            sliderTestLiftF.value = data.front_lift;
+                            lblTestLiftF.textContent = data.front_lift.toFixed(2);
+                        }
+                        if (data.rear_lift != null) {
+                            UI_STATE.rearLiftThrottle = data.rear_lift;
+                            sliderTestLiftR.value = data.rear_lift;
+                            lblTestLiftR.textContent = data.rear_lift.toFixed(2);
+                        }
+                        if (data.front_claw != null) {
+                            UI_STATE.frontClawClosed = data.front_claw === 1;
+                            lblTestClawF.textContent = UI_STATE.frontClawClosed ? 'CLOSED' : 'OPEN';
+                        }
+                        if (data.rear_claw != null) {
+                            UI_STATE.rearClawClosed = data.rear_claw === 1;
+                            lblTestClawR.textContent = UI_STATE.rearClawClosed ? 'CLOSED' : 'OPEN';
+                        }
+
+                        update3DRobotJoints();
+                    })
+                    .catch(err => {
+                        console.warn('Polling gagal:', err);
+                    });
+            }, 150);
+        }
+
+        function applyConfigToSliders(data) {
+            if (data.pid_kp != null) { sliderKp.value = data.pid_kp; lblKp.textContent = data.pid_kp; }
+            if (data.pid_ki != null) { sliderKi.value = data.pid_ki; lblKi.textContent = data.pid_ki; }
+            if (data.pid_kd != null) { sliderKd.value = data.pid_kd; lblKd.textContent = data.pid_kd; }
+
+            if (data.claw_depan_min != null) { sliderClawFMin.value = data.claw_depan_min; document.getElementById('lbl-claw-f-min').textContent = data.claw_depan_min + '°'; }
+            if (data.claw_depan_max != null) { sliderClawFMax.value = data.claw_depan_max; document.getElementById('lbl-claw-f-max').textContent = data.claw_depan_max + '°'; }
+            if (data.lift_depan_min != null) { sliderLiftFMin.value = data.lift_depan_min; document.getElementById('lbl-lift-f-min').textContent = data.lift_depan_min + '°'; }
+            if (data.lift_depan_max != null) { sliderLiftFMax.value = data.lift_depan_max; document.getElementById('lbl-lift-f-max').textContent = data.lift_depan_max + '°'; }
+
+            if (data.claw_belakang_min != null) { sliderClawRMin.value = data.claw_belakang_min; document.getElementById('lbl-claw-r-min').textContent = data.claw_belakang_min + '°'; }
+            if (data.claw_belakang_max != null) { sliderClawRMax.value = data.claw_belakang_max; document.getElementById('lbl-claw-r-max').textContent = data.claw_belakang_max + '°'; }
+            if (data.lift_belakang_min != null) { sliderLiftRMin.value = data.lift_belakang_min; document.getElementById('lbl-lift-r-min').textContent = data.lift_belakang_min + '°'; }
+            if (data.lift_belakang_max != null) { sliderLiftRMax.value = data.lift_belakang_max; document.getElementById('lbl-lift-r-max').textContent = data.lift_belakang_max + '°'; }
+
+            if (data.antitip_pitch_forward != null) { sliderTipPitchF.value = data.antitip_pitch_forward; document.getElementById('lbl-tip-pitch-f').textContent = data.antitip_pitch_forward + '°'; }
+            if (data.antitip_pitch_backward != null) { sliderTipPitchB.value = data.antitip_pitch_backward; document.getElementById('lbl-tip-pitch-b').textContent = data.antitip_pitch_backward + '°'; }
+            if (data.antitip_roll != null) { sliderTipRoll.value = data.antitip_roll; document.getElementById('lbl-tip-roll').textContent = data.antitip_roll + '°'; }
+            if (data.antitip_roll_throttle != null) { sliderTipRollThrottle.value = data.antitip_roll_throttle; document.getElementById('lbl-tip-roll-throttle').textContent = data.antitip_roll_throttle; }
+
+            syncSlidersToUiState();
+            update3DRobotJoints();
+        }
+
+        function getJsonFromSliders() {
+            return {
+                pid_kp: parseFloat(sliderKp.value),
+                pid_ki: parseFloat(sliderKi.value),
+                pid_kd: parseFloat(sliderKd.value),
+
+                claw_depan_min: parseInt(sliderClawFMin.value),
+                claw_depan_max: parseInt(sliderClawFMax.value),
+                lift_depan_min: parseInt(sliderLiftFMin.value),
+                lift_depan_max: parseInt(sliderLiftFMax.value),
+
+                claw_belakang_min: parseInt(sliderClawRMin.value),
+                claw_belakang_max: parseInt(sliderClawRMax.value),
+                lift_belakang_min: parseInt(sliderLiftRMin.value),
+                lift_belakang_max: parseInt(sliderLiftRMax.value),
+
+                antitip_pitch_forward: parseFloat(sliderTipPitchF.value),
+                antitip_pitch_backward: parseFloat(sliderTipPitchB.value),
+                antitip_roll: parseFloat(sliderTipRoll.value),
+                antitip_roll_throttle: parseFloat(sliderTipRollThrottle.value)
+            };
+        }
+
+        document.getElementById('btn-send').addEventListener('click', () => {
+            if (!isConnected) {
+                alert('Hubungkan ke robot terlebih dahulu sebelum mengirim konfigurasi.');
+                return;
+            }
+
+            const host = hostInput.value.trim();
+            const body = getJsonFromSliders();
+
+            fetch(`http://${host}/api/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    alert('Konfigurasi sukses diterapkan secara sementara di ESP32!');
+                } else {
+                    alert('Gagal menerapkan konfigurasi.');
+                }
+            })
+            .catch(err => {
+                console.error('Kirim gagal:', err);
+                alert('Koneksi terputus saat mengirim data.');
+            });
+        });
+
+        document.getElementById('btn-read').addEventListener('click', () => {
+            if (!isConnected) {
+                alert('Hubungkan ke robot terlebih dahulu.');
+                return;
+            }
+            connectToRobot();
+        });
+
+        document.getElementById('btn-zero-yaw').addEventListener('click', () => {
+            if (!isConnected) {
+                UI_STATE.yaw = 0;
+                UI_STATE.pitch = 0;
+                UI_STATE.roll = 0;
+                telYaw.textContent = '0.0°';
+                telPitch.textContent = '0.0°';
+                telRoll.textContent = '0.0°';
+                update3DRobotJoints();
+                return;
+            }
+            const host = hostInput.value.trim();
+            fetch(`http://${host}/api/zero_yaw`, { method: 'POST' })
+                .then(() => console.log('Zero yaw request sent'))
+                .catch(err => console.error(err));
+        });
+
+        function sendManualControl(target, type, val) {
+            if (!isConnected) return;
+            const host = hostInput.value.trim();
+            fetch(`http://${host}/api/test_servo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target, type, value: val })
+            }).catch(err => console.warn(err));
+        }
+
+        document.getElementById('btn-reboot').addEventListener('click', () => {
+            if (!isConnected) {
+                alert('Hubungkan ke robot terlebih dahulu sebelum menyimpan permanen.');
+                return;
+            }
+
+            if (!confirm('Apakah Anda yakin ingin menyimpan seluruh konfigurasi ini ke memori permanen (Preferences) dan me-reboot ESP32 ke Mode Kompetisi? WiFi akan mati dan stik bluetooth langsung diaktifkan.')) {
+                return;
+            }
+
+            const host = hostInput.value.trim();
+            const body = getJsonFromSliders();
+
+            fetch(`http://${host}/api/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    return fetch(`http://${host}/api/reboot`, { method: 'POST' });
+                } else {
+                    throw new Error('Gagal menerapkan konfigurasi.');
+                }
+            })
+            .then(() => {
+                alert('Robot sedang me-reboot... Silakan matikan Wi-Fi laptop/HP Anda dan nyalakan stik PS4. Robot akan langsung terhubung ke stik!');
+                disconnectFromRobot();
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Terjadi kesalahan saat menyimpan atau mengirim perintah reboot.');
+            });
+        });
+
+        // ─── 5. UI INTERACTION & RENDER LOOP ───────────────────────────
+        document.getElementById('btn-reset-view').addEventListener('click', () => {
+            camera.position.set(0.28, 0.18, 0.28);
+            controls.target.set(0, 0.02, 0);
+            controls.update();
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // HTTPS Mixed Content Warning check
+        const httpsWarnBanner = document.getElementById('https-warning-banner');
+        const closeHttpsBtn = document.getElementById('btn-close-https-warn');
+        if (window.location.protocol === 'https:') {
+            httpsWarnBanner.style.display = 'block';
+        }
+        closeHttpsBtn.addEventListener('click', () => {
+            httpsWarnBanner.style.display = 'none';
+        });
+
+        syncSlidersToUiState();
+        update3DRobotJoints();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+
+</html>

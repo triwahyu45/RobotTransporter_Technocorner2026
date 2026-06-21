@@ -148,6 +148,18 @@ body {
             display: block;
         }
 
+        body.race-hud-compact #canva-container {
+            height: calc(100vh - 150px);
+        }
+
+        body.settings-hud-compact #canva-container {
+            height: calc(100vh - 154px);
+        }
+
+        body.race-hud-compact.settings-hud-compact #canva-container {
+            height: calc(100vh - 108px);
+        }
+
         #status-overlay {
             position: absolute;
             top: 10px;
@@ -186,6 +198,28 @@ body {
             min-height: 92px;
             padding-top: 45px;
             align-items: flex-start;
+        }
+
+        #right-panel>.header.settings-compact {
+            min-height: 52px;
+            padding: 11px 56px 10px 10px;
+            align-items: center;
+        }
+
+        #right-panel>.header.settings-compact .sim-title {
+            font-size: 18px;
+            letter-spacing: .24em;
+        }
+
+        #right-panel>.header.settings-compact .btn-group {
+            max-width: min(760px, calc(100vw - 420px));
+            grid-template-columns: max-content minmax(150px, 230px) max-content;
+        }
+
+        #right-panel>.header.settings-compact .btn-group>button:not(#settings-focus-toggle):not(#connect-esp-btn),
+        #right-panel>.header.settings-compact .btn-group>#reset-view-btn,
+        #right-panel>.header.settings-compact .btn-group>#reset-robot-btn {
+            display: none;
         }
 
         .ui-btn {
@@ -867,6 +901,28 @@ body {
         flex-direction: column;
     }
 
+    #right-panel>.header.settings-compact {
+        min-height: 58px;
+        padding: 10px 52px 8px 10px;
+    }
+
+    #right-panel>.header.settings-compact .sim-title {
+        display: none;
+    }
+
+    #right-panel>.header.settings-compact .btn-group {
+        max-width: none;
+        grid-template-columns: 88px minmax(0, 1fr) 120px;
+    }
+
+    body.settings-hud-compact #canva-container {
+        height: calc(100vh - 196px);
+    }
+
+    body.race-hud-compact.settings-hud-compact #canva-container {
+        height: calc(100vh - 156px);
+    }
+
     .editor-actionbar {
         grid-template-columns: 1fr 1fr;
     }
@@ -897,6 +953,25 @@ body {
     border-bottom: 1px solid rgba(0, 209, 255, .12);
     background: linear-gradient(180deg, rgba(5, 13, 24, .88), rgba(3, 8, 16, .72));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035), 0 12px 36px rgba(0, 0, 0, .24);
+}
+
+.race-focus-toggle {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 209, 255, .28);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .36);
+    color: #e9ffff;
+    font: 900 17px/1 'Courier New', monospace;
+    cursor: pointer;
+}
+
+.race-focus-toggle:hover {
+    border-color: rgba(50, 255, 177, .45);
+    color: #32ffb1;
 }
 
 .race-primary,
@@ -1071,6 +1146,57 @@ body {
     font-size: 11px;
 }
 
+.race-hud.race-compact {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    min-height: 58px;
+    padding: 7px 12px;
+    gap: 8px;
+    align-items: center;
+}
+
+.race-hud.race-compact .race-round-label,
+.race-hud.race-compact .race-checklist {
+    display: none;
+}
+
+.race-hud.race-compact .race-primary {
+    flex-wrap: nowrap;
+    gap: 7px;
+}
+
+.race-hud.race-compact .race-timer {
+    min-width: 104px;
+    min-height: 38px;
+    font-size: 27px;
+}
+
+.race-hud.race-compact .race-score,
+.race-hud.race-compact .race-retry,
+.race-hud.race-compact .race-status {
+    min-height: 34px;
+    padding: 5px 9px;
+}
+
+.race-hud.race-compact .race-status {
+    min-width: 96px;
+}
+
+.race-hud.race-compact .race-actions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
+.race-hud.race-compact .race-btn {
+    min-width: 84px;
+    min-height: 30px;
+    padding-inline: 10px;
+}
+
+.race-hud.race-compact .race-focus-toggle {
+    min-width: 30px;
+}
+
 @media (max-width: 900px) {
     .race-hud {
         grid-template-columns: 1fr;
@@ -1085,6 +1211,31 @@ body {
     .race-timer {
         min-width: 96px;
         font-size: 24px;
+    }
+
+    .race-hud.race-compact {
+        grid-template-columns: 1fr;
+        padding: 7px 44px 7px 9px;
+    }
+
+    .race-hud.race-compact .race-primary,
+    .race-hud.race-compact .race-actions {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .race-hud.race-compact .race-btn {
+        min-width: 0;
+        min-height: 28px;
+        padding-inline: 8px;
+        font-size: 10px;
+        flex: 1 1 72px;
+    }
+
+    .race-hud.race-compact .race-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
     }
 }
 

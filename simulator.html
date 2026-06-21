@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -18,6 +18,7 @@
             <a href="index.html">Home</a>
             <a class="active" href="simulator.html">Simulator</a>
             <a href="stick_test.html">Stick Test</a>
+            <a href="dashboard.html">Tuning</a>
         </div>
     </nav>
 
@@ -192,6 +193,7 @@ void loop() {
         <div class="header">
             <span class="sim-title">Transporter Arena Simulator</span>
             <div class="btn-group">
+                <button id="settings-focus-toggle" class="ui-btn settings-focus-toggle" type="button" title="Hide/show simulator settings">TOOLS -</button>
                 <button id="toggle-editor-btn" class="ui-btn">EDITOR</button>
                 <button id="toggle-overlay-btn" class="ui-btn">INFO</button>
                 <button id="toggle-3d-btn" class="ui-btn active-toggle">3D ON</button>
@@ -236,6 +238,7 @@ void loop() {
                 <button id="race-reset-btn" class="ui-btn race-btn">RESET RACE</button>
                 <button id="race-retry-btn" class="ui-btn race-btn">RETRY</button>
                 <button id="race-finish-btn" class="ui-btn race-btn finish-btn">MARK FINISH</button>
+                <button id="race-focus-toggle" class="race-focus-toggle" type="button" title="Minimize/expand race HUD" aria-label="Minimize race HUD">-</button>
             </div>
             <div id="race-checklist" class="race-checklist" aria-label="Manual scoring checklist"></div>
         </section>
@@ -372,6 +375,27 @@ void loop() {
         // Array global untuk dideteksi oleh Raycaster gravitasi (Y-Axis)
         const floorObjects = [];
         const officialFloorObjects = [];
+        const collisionBoxes = [];
+        const officialCollisionObjects = [];
+
+        function addCollisionBoxFromMesh(mesh, padM = 0.035, layer = 'track') {
+            const worldBox = new THREE.Box3().setFromObject(mesh);
+            if (!Number.isFinite(worldBox.min.x) || !Number.isFinite(worldBox.max.x)) return null;
+            if ((worldBox.max.y - worldBox.min.y) < 0.018) return null;
+            const item = {
+                minX: worldBox.min.x - padM,
+                maxX: worldBox.max.x + padM,
+                minZ: worldBox.min.z - padM,
+                maxZ: worldBox.max.z + padM,
+                minY: worldBox.min.y,
+                maxY: worldBox.max.y,
+                object: mesh,
+                layer,
+                source: mesh.name || 'mesh-collider'
+            };
+            collisionBoxes.push(item);
+            return item;
+        }
 
         // 1. Inisialisasi UI Toggles & Editor
         const leftPanel = document.getElementById('left-panel');
@@ -691,7 +715,6 @@ void loop() {
             const cm = 0.01;
             const cmX = (x) => (x - 150) * cm;
             const cmZ = (y) => (y - 150) * cm;
-            const rotateOfficialCm = (x, y) => ({ x: 300 - x, y: 300 - y });
 
             const trackTexture = new THREE.TextureLoader().load('Web_Assets/track_tc2026_clean.png');
             trackTexture.encoding = THREE.sRGBEncoding;
@@ -770,6 +793,7 @@ void loop() {
                 targetGroup.add(m);
                 addMeshEdges(m, 18, targetGroup);
                 if (detectable) tofObjects.push(m);
+                if (detectable || heightM >= 0.075) addCollisionBoxFromMesh(m, detectable ? 0.035 : 0.02, targetGroup === gameObjectGroup ? 'game-object' : 'procedural');
                 if (isFloor) floorObjects.push(m);
                 return m;
             }
@@ -789,6 +813,7 @@ void loop() {
                 proceduralArenaGroup.add(m);
                 addMeshEdges(m);
                 tofObjects.push(m);
+                addCollisionBoxFromMesh(m, 0.028, 'procedural');
                 return m;
             }
 
@@ -831,11 +856,9 @@ void loop() {
             }
 
             function addDropZoneAndBox(colorKey, xCm, yCm, label, isObstacle = false) {
-                const p = rotateOfficialCm(xCm, yCm);
                 const c = colors[colorKey];
-                const box = addBoxCm(p.x, p.y, 10, 10, 0.10, makeMat(c, 1), `${label}-box-10x10x10cm`, true, false, gameObjectGroup);
-                box.userData.sourceCm = { x: xCm, y: yCm };
-                box.userData.worldCm = p;
+                const box = addBoxCm(xCm, yCm, 10, 10, 0.10, makeMat(c, 1), `${label}-box-10x10x10cm`, true, false, gameObjectGroup);
+                box.userData.worldCm = { x: xCm, y: yCm };
                 box.userData.isTransporterBox = true;
                 box.userData.colorKey = colorKey;
                 box.userData.isObstacleBox = isObstacle;
@@ -880,14 +903,14 @@ void loop() {
             wallRects.forEach((r, idx) => addWallRectCm(...r, `pixel-wall-${idx}`, 0.08, wallMat));
             (window.TC2026_TRACK?.supplementalWallRectsCm || []).forEach((r, idx) => addWallRectCm(...r, `supplemental-wall-${idx}`, 0.08, wallMat));
 
-            addDropZoneAndBox('blue', 122.9, 134.3, 'blue');
-            addDropZoneAndBox('orange', 206.9, 214.4, 'orange');
-            addDropZoneAndBox('yellow', 17.3, 51.9, 'yellow');
-            addDropZoneAndBox('purple', 252.1, 44.8, 'purple');
-            addDropZoneAndBox('pink', 11.3, 289.7, 'pink');
-            addDropZoneAndBox('red', 72, 151, 'red-obstacle-1', true);
-            addDropZoneAndBox('red', 229, 149, 'red-obstacle-2', true);
-            addDropZoneAndBox('red', 251, 254, 'red-obstacle-3', true);
+            addDropZoneAndBox('orange', 92, 88, 'orange');
+            addDropZoneAndBox('pink', 238, 58, 'pink');
+            addDropZoneAndBox('blue', 190, 174, 'blue');
+            addDropZoneAndBox('purple', 70, 230, 'purple');
+            addDropZoneAndBox('yellow', 226, 230, 'yellow');
+            addDropZoneAndBox('red', 82, 150, 'red-obstacle-1', true);
+            addDropZoneAndBox('red', 218, 150, 'red-obstacle-2', true);
+            addDropZoneAndBox('red', 214, 246, 'red-obstacle-3', true);
         }
         createArena();
 
@@ -948,6 +971,7 @@ void loop() {
                     remapOfficialVertexColors(obj);
                     obj.material = officialMat;
                     officialFloorObjects.push(obj);
+                    officialCollisionObjects.push(obj);
                 });
 
                 const box = new THREE.Box3().setFromObject(root);
@@ -978,8 +1002,8 @@ void loop() {
                 const boundary = new THREE.Group();
                 boundary.name = 'official-arena-perimeter';
                 const boundaryMat = new THREE.MeshPhongMaterial({ color: 0x060708, emissive: 0x000000, shininess: 18 });
-                const boundaryHeight = 0.028;
-                const boundaryThick = 0.025;
+                const boundaryHeight = 0.13;
+                const boundaryThick = 0.055;
                 [
                     [0, 0, 3.06, boundaryThick],
                     [0, 0, boundaryThick, 3.06],
@@ -992,6 +1016,8 @@ void loop() {
                     m.position.set(x, boundaryHeight / 2 + 0.003, z);
                     m.name = `official-boundary-${idx}`;
                     boundary.add(m);
+                    tofObjects.push(m);
+                    addCollisionBoxFromMesh(m, 0.02, 'official-boundary');
                 });
                 officialArenaGroup.add(boundary);
                 setOfficialArenaActive(true);
@@ -1090,8 +1116,11 @@ void loop() {
 
             rayFront.set(origin, dirF); rayRight.set(origin, dirR); rayBack.set(origin, dirB); rayLeft.set(origin, dirL);
 
-            const iF = rayFront.intersectObjects(tofObjects, true); const iR = rayRight.intersectObjects(tofObjects, true);
-            const iB = rayBack.intersectObjects(tofObjects, true); const iL = rayLeft.intersectObjects(tofObjects, true);
+            const sensorTargets = activeTrackLayer === 'official'
+                ? tofObjects.concat(officialCollisionObjects)
+                : tofObjects;
+            const iF = rayFront.intersectObjects(sensorTargets, true); const iR = rayRight.intersectObjects(sensorTargets, true);
+            const iB = rayBack.intersectObjects(sensorTargets, true); const iL = rayLeft.intersectObjects(sensorTargets, true);
 
             sensors.front.mm = (iF.length > 0) ? Math.round(iF[0].distance * 1000) : tofMax + 1;
             sensors.right.mm = (iR.length > 0) ? Math.round(iR[0].distance * 1000) : tofMax + 1;
@@ -1122,6 +1151,8 @@ void loop() {
         function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
 
         const RACE_STORAGE_KEY = 'transporter_tc2026_race_mode_v1';
+        const RACE_UI_STORAGE_KEY = 'transporter_tc2026_race_ui_v1';
+        const SIM_UI_STORAGE_KEY = 'transporter_tc2026_sim_ui_v1';
         const RACE_MAX_RETRY = 3;
         const RACE_BOXES = {
             orange: { label: 'Jingga', points: 1, color: '#ffaa19' },
@@ -1149,10 +1180,16 @@ void loop() {
             pause: document.getElementById('race-pause-btn'),
             reset: document.getElementById('race-reset-btn'),
             retryBtn: document.getElementById('race-retry-btn'),
-            finish: document.getElementById('race-finish-btn')
+            finish: document.getElementById('race-finish-btn'),
+            focusToggle: document.getElementById('race-focus-toggle'),
+            hud: document.getElementById('race-hud'),
+            settingsToggle: document.getElementById('settings-focus-toggle'),
+            header: document.querySelector('#right-panel .header')
         };
         let raceTimer = null;
         let raceState = makeDefaultRaceState('penyisihan');
+        let raceCompact = false;
+        let settingsCompact = false;
 
         function makeDefaultRaceState(roundKey) {
             const round = RACE_ROUNDS[roundKey] || RACE_ROUNDS.penyisihan;
@@ -1189,6 +1226,63 @@ void loop() {
                 localStorage.setItem(RACE_STORAGE_KEY, JSON.stringify(raceState));
             } catch (err) {
                 console.warn('Race state tidak bisa disimpan:', err);
+            }
+        }
+
+        function saveRaceUiState() {
+            try {
+                localStorage.setItem(RACE_UI_STORAGE_KEY, JSON.stringify({ compact: raceCompact }));
+            } catch (err) {
+                console.warn('Race UI state tidak bisa disimpan:', err);
+            }
+        }
+
+        function loadRaceUiState() {
+            try {
+                const raw = localStorage.getItem(RACE_UI_STORAGE_KEY);
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                raceCompact = !!saved?.compact;
+            } catch (err) {
+                console.warn('Race UI state tidak bisa dibaca:', err);
+            }
+        }
+
+        function saveSimUiState() {
+            try {
+                localStorage.setItem(SIM_UI_STORAGE_KEY, JSON.stringify({ settingsCompact }));
+            } catch (err) {
+                console.warn('Simulator UI state tidak bisa disimpan:', err);
+            }
+        }
+
+        function loadSimUiState() {
+            try {
+                const raw = localStorage.getItem(SIM_UI_STORAGE_KEY);
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                settingsCompact = !!saved?.settingsCompact;
+            } catch (err) {
+                console.warn('Simulator UI state tidak bisa dibaca:', err);
+            }
+        }
+
+        function renderSimUiMode() {
+            raceEls.header?.classList.toggle('settings-compact', settingsCompact);
+            document.body.classList.toggle('settings-hud-compact', settingsCompact);
+            if (raceEls.settingsToggle) {
+                raceEls.settingsToggle.textContent = settingsCompact ? 'TOOLS +' : 'TOOLS -';
+                raceEls.settingsToggle.title = settingsCompact ? 'Show simulator settings' : 'Hide simulator settings';
+            }
+        }
+
+        function renderRaceUiMode() {
+            raceEls.hud?.classList.toggle('race-compact', raceCompact);
+            document.body.classList.toggle('race-hud-compact', raceCompact);
+            if (raceEls.focusToggle) {
+                raceEls.focusToggle.textContent = raceCompact ? '+' : '-';
+                raceEls.focusToggle.setAttribute('aria-label', raceCompact ? 'Expand race HUD' : 'Minimize race HUD');
+                raceEls.focusToggle.title = raceCompact ? 'Expand race HUD' : 'Minimize race HUD';
             }
         }
 
@@ -1267,6 +1361,7 @@ void loop() {
             if (raceEls.finish) raceEls.finish.disabled = isRaceLocked() || raceState.remaining <= 0;
             renderRaceChecklist();
             applyRaceVisuals();
+            renderRaceUiMode();
         }
 
         function stopRaceTimer() {
@@ -1335,6 +1430,18 @@ void loop() {
         raceEls.reset?.addEventListener('click', () => resetRace());
         raceEls.retryBtn?.addEventListener('click', retryRace);
         raceEls.finish?.addEventListener('click', finishRace);
+        raceEls.focusToggle?.addEventListener('click', () => {
+            raceCompact = !raceCompact;
+            renderRaceUiMode();
+            saveRaceUiState();
+            try { resizeCanvas(); } catch (err) { }
+        });
+        raceEls.settingsToggle?.addEventListener('click', () => {
+            settingsCompact = !settingsCompact;
+            renderSimUiMode();
+            saveSimUiState();
+            try { resizeCanvas(); } catch (err) { }
+        });
         raceEls.checklist?.addEventListener('change', (event) => {
             const key = event.target?.dataset?.raceBox;
             if (!key || isRaceLocked()) return;
@@ -1343,7 +1450,10 @@ void loop() {
             saveRaceState();
         });
         loadRaceState();
+        loadRaceUiState();
+        loadSimUiState();
         renderRaceUI();
+        renderSimUiMode();
 
         function setSensorDisplay(key, id, rawValue) {
             const el = document.getElementById(id); if (!el) return;
@@ -1503,6 +1613,80 @@ void loop() {
         function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
         function wrapAngle(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
         function radToDeg(v) { return ((v * 180 / Math.PI) % 360 + 360) % 360; }
+
+        const ROBOT_COLLISION = {
+            radius: 0.076,
+            arenaHalf: 1.50,
+            rayHeight: 0.055
+        };
+        const robotCollisionRay = new THREE.Raycaster();
+        const robotCollisionDirs = [
+            new THREE.Vector3(1, 0, 0),
+            new THREE.Vector3(-1, 0, 0),
+            new THREE.Vector3(0, 0, 1),
+            new THREE.Vector3(0, 0, -1),
+            new THREE.Vector3(1, 0, 1).normalize(),
+            new THREE.Vector3(1, 0, -1).normalize(),
+            new THREE.Vector3(-1, 0, 1).normalize(),
+            new THREE.Vector3(-1, 0, -1).normalize()
+        ];
+
+        function isCollisionBoxActive(box) {
+            if (!box.object) return true;
+            if (box.object.visible === false) return false;
+            if (box.layer === 'procedural' && activeTrackLayer === 'official') return false;
+            return true;
+        }
+
+        function circleOverlapsBox2D(x, z, radius, box) {
+            const nearestX = Math.max(box.minX, Math.min(x, box.maxX));
+            const nearestZ = Math.max(box.minZ, Math.min(z, box.maxZ));
+            const dx = x - nearestX;
+            const dz = z - nearestZ;
+            return (dx * dx + dz * dz) < radius * radius;
+        }
+
+        function officialMeshBlocksRobotAt(x, z) {
+            if (activeTrackLayer !== 'official' || officialCollisionObjects.length === 0) return false;
+            const origin = new THREE.Vector3(x, robot.position.y + ROBOT_COLLISION.rayHeight, z);
+            for (const dir of robotCollisionDirs) {
+                robotCollisionRay.set(origin, dir);
+                robotCollisionRay.far = ROBOT_COLLISION.radius;
+                const hits = robotCollisionRay.intersectObjects(officialCollisionObjects, true);
+                const wallHit = hits.find((hit) => hit.distance <= ROBOT_COLLISION.radius && hit.point.y > 0.018);
+                if (wallHit) return true;
+            }
+            return false;
+        }
+
+        function robotWouldCollideAt(x, z) {
+            const limit = ROBOT_COLLISION.arenaHalf - ROBOT_COLLISION.radius;
+            if (x < -limit || x > limit || z < -limit || z > limit) return true;
+            for (const box of collisionBoxes) {
+                if (!isCollisionBoxActive(box)) continue;
+                if (circleOverlapsBox2D(x, z, ROBOT_COLLISION.radius, box)) return true;
+            }
+            return officialMeshBlocksRobotAt(x, z);
+        }
+
+        function applyRobotPlanarMove(dx, dz, dyaw = 0) {
+            const prevX = robot.position.x;
+            const prevZ = robot.position.z;
+            const nextX = prevX + dx;
+            const nextZ = prevZ + dz;
+
+            if (!robotWouldCollideAt(nextX, nextZ)) {
+                robot.position.x = nextX;
+                robot.position.z = nextZ;
+            } else if (!robotWouldCollideAt(nextX, prevZ)) {
+                robot.position.x = nextX;
+            } else if (!robotWouldCollideAt(prevX, nextZ)) {
+                robot.position.z = nextZ;
+            }
+
+            robot.rotation.y += dyaw;
+            return robot.position.x !== prevX || robot.position.z !== prevZ;
+        }
 
 
         // ==========================================================
@@ -1845,10 +2029,8 @@ void loop() {
                     let globalActualX = localActualX * cosT - localActualY * sinT;
                     let globalActualY = localActualX * sinT + localActualY * cosT;
 
-                    // Kecepatan Robot Ditingkatkan
-                    robot.position.x += globalActualX * 0.012;
-                    robot.position.z -= globalActualY * 0.012;
-                    robot.rotation.y -= actualZ * 0.12;
+                    // Kecepatan Robot + collision body sederhana.
+                    const moved = applyRobotPlanarMove(globalActualX * 0.012, -globalActualY * 0.012, -actualZ * 0.12);
 
                     // FISIKA RAMP: robot naik-turun + miring mengikuti bidang tanjakan.
                     updateRobotGroundPose();
@@ -1857,15 +2039,17 @@ void loop() {
 
                     if (slip > 0.1) {
                         if (overlayVisible) { slipUI.innerHTML = `STALL/SLIP (${slip.toFixed(2)})`; slipUI.style.color = "#ff3333"; }
-                        robot.position.x += (Math.random() - 0.5) * slip * 0.002;
-                        robot.position.z += (Math.random() - 0.5) * slip * 0.002;
+                        applyRobotPlanarMove((Math.random() - 0.5) * slip * 0.002, (Math.random() - 0.5) * slip * 0.002, 0);
                         try {
                             if (gp.vibrationActuator && gp.vibrationActuator.type === "dual-rumble") {
                                 gp.vibrationActuator.playEffect("dual-rumble", { startDelay: 0, duration: 50, weakMagnitude: Math.min(slip / 4, 1.0), strongMagnitude: Math.min(slip / 4, 1.0) });
                             }
                         } catch (e) { }
                     } else {
-                        if (overlayVisible) { slipUI.innerHTML = `Aman (0.00)`; slipUI.style.color = "#32ffb1"; }
+                        if (overlayVisible) {
+                            slipUI.innerHTML = moved ? `Aman (0.00)` : `BLOCKED`;
+                            slipUI.style.color = moved ? "#32ffb1" : "#ff5a72";
+                        }
                     }
 
                     if (overlayVisible) {
@@ -1897,6 +2081,18 @@ void loop() {
         const COMPASS_RADIUS = 55;
         const INNER_RADIUS = 40;
         const OUTER_RADIUS = 60;
+        const viewCubeCameraQuat = new THREE.Quaternion();
+
+        function projectViewCubePoint(localX, localY, localZ, centerX, centerY, size) {
+            const p = new THREE.Vector3(localX, localY, localZ);
+            viewCubeCameraQuat.copy(camera.quaternion).invert();
+            p.applyQuaternion(viewCubeCameraQuat);
+            return {
+                x: centerX + p.x * size * 0.7,
+                y: centerY - p.y * size * 0.7,
+                z: p.z
+            };
+        }
 
         function drawViewCube() {
             const w = viewCubeCanvas.width;
@@ -1944,9 +2140,9 @@ void loop() {
             // Draw 3D cube faces
             const size = 20;
             const cube = [
-                { vertices: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]], face: 'front', color: '#ff6b6b', label: 'F' },
+                { vertices: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]], face: 'back', color: '#ffe66d', label: 'B' },
                 { vertices: [[1,0,0],[1,0,1],[1,1,1],[1,1,0]], face: 'right', color: '#4ecdc4', label: 'R' },
-                { vertices: [[1,0,1],[0,0,1],[0,1,1],[1,1,1]], face: 'back', color: '#ffe66d', label: 'B' },
+                { vertices: [[1,0,1],[0,0,1],[0,1,1],[1,1,1]], face: 'front', color: '#ff6b6b', label: 'F' },
                 { vertices: [[0,0,1],[0,0,0],[0,1,0],[0,1,1]], face: 'left', color: '#95e1d3', label: 'L' },
                 { vertices: [[0,1,0],[1,1,0],[1,1,1],[0,1,1]], face: 'top', color: '#a8dadc', label: 'T' },
                 { vertices: [[0,0,1],[1,0,1],[1,0,0],[0,0,0]], face: 'bottom', color: '#457b9d', label: 'Bo' }
@@ -1954,24 +2150,10 @@ void loop() {
             
             const projected = cube.map(face => {
                 const pts = face.vertices.map(v => {
-                    let x = (v[0] - 0.5) * 2;
-                    let y = (v[1] - 0.5) * 2;
-                    let z = (v[2] - 0.5) * 2;
-                    
-                    // Apply view cube rotation
-                    const cx = Math.cos(viewCubeRotation.x), sx = Math.sin(viewCubeRotation.x);
-                    const cy = Math.cos(viewCubeRotation.y), sy = Math.sin(viewCubeRotation.y);
-                    
-                    let ty = y * cx - z * sx;
-                    let tz = y * sx + z * cx;
-                    let tx = x * cy + tz * sy;
-                    tz = -x * sy + tz * cy;
-                    
-                    return { 
-                        x: centerX + tx * size * 0.7, 
-                        y: centerY - ty * size * 0.7, 
-                        z: tz 
-                    };
+                    const x = (v[0] - 0.5) * 2;
+                    const y = (v[1] - 0.5) * 2;
+                    const z = (v[2] - 0.5) * 2;
+                    return projectViewCubePoint(x, y, z, centerX, centerY, size);
                 });
                 const avgZ = pts.reduce((sum, p) => sum + p.z, 0) / pts.length;
                 return { ...face, pts, avgZ };
@@ -2013,7 +2195,7 @@ void loop() {
             dir.normalize();
             viewCubeRotation.y = Math.atan2(dir.z, dir.x);
             viewCubeRotation.x = THREE.MathUtils.clamp(
-                Math.acos(THREE.MathUtils.clamp(dir.y, -1, 1)) - Math.PI / 2,
+                Math.asin(THREE.MathUtils.clamp(dir.y, -1, 1)),
                 -Math.PI / 2 + 0.1,
                 Math.PI / 2 - 0.1
             );
@@ -2024,11 +2206,11 @@ void loop() {
             // Calculate camera position based on view cube rotation
             const distance = 3.2;
             const theta = viewCubeRotation.y;
-            const phi = viewCubeRotation.x + Math.PI / 2;
+            const horizontal = distance * Math.cos(viewCubeRotation.x);
             
-            const camX = distance * Math.sin(phi) * Math.cos(theta);
-            const camY = distance * Math.cos(phi);
-            const camZ = distance * Math.sin(phi) * Math.sin(theta);
+            const camX = horizontal * Math.cos(theta);
+            const camY = distance * Math.sin(viewCubeRotation.x);
+            const camZ = horizontal * Math.sin(theta);
             
             camera.position.set(camX, camY, camZ);
             controls.target.set(0, 0, 0);
@@ -2045,7 +2227,7 @@ void loop() {
                 const dx = (e.offsetX - viewCubeDragStart.x) * 0.02;
                 const dy = (e.offsetY - viewCubeDragStart.y) * 0.02;
                 
-                viewCubeRotation.y += dx;
+                viewCubeRotation.y -= dx;
                 viewCubeRotation.x += dy;
                 viewCubeRotation.x = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, viewCubeRotation.x));
                 
@@ -2079,7 +2261,7 @@ void loop() {
                 // Right face (E)
                 else if (angle >= -Math.PI/4 && angle < Math.PI/4) {
                     viewCubeRotation.x = 0.3;
-                    viewCubeRotation.y = -Math.PI / 2;
+                    viewCubeRotation.y = 0;
                 }
                 // Bottom face (S)
                 else if (angle >= Math.PI/4 && angle < 3*Math.PI/4) {
@@ -2088,7 +2270,7 @@ void loop() {
                 // Left face (W)
                 else {
                     viewCubeRotation.x = 0.3;
-                    viewCubeRotation.y = Math.PI / 2;
+                    viewCubeRotation.y = Math.PI;
                 }
                 
                 syncCameraFromViewCube();
