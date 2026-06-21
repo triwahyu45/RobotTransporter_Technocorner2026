@@ -440,7 +440,7 @@
             <div class="panel-header">
                 <label style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-muted);">Alamat mDNS Robot</label>
                 <div class="mdns-row">
-                    <input id="mdns-host" class="host-input" value="robot.local" placeholder="robot.local atau IP" autocomplete="off">
+                    <input id="mdns-host" class="host-input" value="Triwahyu45Transporter.local" placeholder="Triwahyu45Transporter.local atau IP" autocomplete="off">
                     <button id="btn-connect" class="btn btn-primary">Connect</button>
                 </div>
             </div>
@@ -796,8 +796,12 @@
                     cadModel.scale.setScalar(0.001);
                 }
                 
-                // Centering slightly on ground
-                cadModel.position.set(0, 0.0265, 0); 
+                // Calculate bounding box AFTER scaling to get accurate dimensions in meters
+                const scaledBox = new THREE.Box3().setFromObject(cadModel);
+                const minY = scaledBox.min.y;
+                
+                // Align the lowest part of the wheels exactly at y = 0
+                cadModel.position.set(0, -minY, 0);
                 robotGroup.add(cadModel);
 
                 // Hide procedural visualizer
