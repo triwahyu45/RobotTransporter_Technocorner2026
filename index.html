@@ -651,6 +651,7 @@
     <script src="js/shared-nav.js"></script>
 
     <script>
+        window.myScriptStarted = true;
         // ─── 1. SETUP THREE.JS 3D ENVIRONMENT ───────────────────────────
         const container = document.getElementById('canvas3d');
         const scene = new THREE.Scene();
@@ -1396,6 +1397,7 @@
             renderer.render(scene, camera);
         }
         animate();
+        window.myScriptCompleted = true;
     </script>
 </body>
 
